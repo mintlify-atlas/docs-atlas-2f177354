@@ -1,0 +1,394 @@
+---
+title: 'Monitoring Use Cases'
+description: 'Business logic operations for managing inspection questions'
+icon: 'gears'
+---
+
+The monitoring feature provides repository-based operations for managing inspection questions. While there are no explicit use case classes, the repository pattern encapsulates the business logic. This page documents the available operations through the repository interface.
+
+## Overview
+
+The monitoring system uses the repository pattern to manage inspection questions. Operations are accessed through the `QuestionRepository` interface and executed via the `QuestionsController` state manager.
+
+## Available Operations
+
+### Get Questions for Apiary
+
+Retrieves all questions configured for a specific apiary.
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary to fetch questions for
+</ParamField>
+
+**Returns:** `Either<Failure, List<Pregunta>>`
+
+**Usage:**
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:softbee/feature/monitoring/presentation/providers/questions_providers.dart';
+
+// In a widget
+class QuestionsList extends ConsumerWidget {
+  final String apiaryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final questionsState = ref.watch(questionsProvider);
+    
+    useEffect(() {
+      ref.read(questionsProvider.notifier).fetchPreguntas(apiaryId);
+      return null;
+    }, [apiaryId]);
+
+    if (questionsState.isLoading) {
+      return CircularProgressIndicator();
+    }
+
+    return ListView.builder(
+      itemCount: questionsState.preguntas.length,
+      itemBuilder: (context, index) {
+        final question = questionsState.preguntas[index];
+        return ListTile(
+          title: Text(question.texto),
+          subtitle: Text(question.categoria ?? ''),
+        );
+      },
+    );
+  }
+}
+```
+
+### Create Question
+
+Creates a new inspection question for an apiary.
+
+<ParamField path="pregunta" type="Pregunta" required>
+  The question entity to create. The `id` field can be empty as it will be assigned by the server.
+</ParamField>
+
+**Returns:** `Either<Failure, Pregunta>`
+
+**Usage:**
+
+```dart
+import 'package:softbee/feature/monitoring/domain/entities/question_model.dart';
+
+final newQuestion = Pregunta(
+  id: '', // Will be assigned by server
+  apiarioId: 'apiary123',
+  texto: '¿Presencia de varroa?',
+  tipoRespuesta: 'seleccion',
+  categoria: 'Salud',
+  obligatoria: true,
+  opciones: ['Sí', 'No'],
+  orden: 10,
+  activa: true,
+);
+
+// Using the controller
+await ref.read(questionsProvider.notifier).createPregunta(newQuestion);
+```
+
+### Update Question
+
+Updates an existing inspection question.
+
+<ParamField path="pregunta" type="Pregunta" required>
+  The question entity with updated values. The `id` field must be valid.
+</ParamField>
+
+**Returns:** `Either<Failure, Pregunta>`
+
+**Usage:**
+
+```dart
+final updatedQuestion = existingQuestion.copyWith(
+  texto: 'Pregunta actualizada',
+  obligatoria: false,
+);
+
+await ref.read(questionsProvider.notifier).updatePregunta(updatedQuestion);
+```
+
+### Delete Question
+
+Deletes an inspection question permanently.
+
+<ParamField path="id" type="String" required>
+  The ID of the question to delete
+</ParamField>
+
+<ParamField path="apiaryId" type="String" required>
+  The apiary ID (used to refresh the list after deletion)
+</ParamField>
+
+**Returns:** `Either<Failure, void>`
+
+**Usage:**
+
+```dart
+// Delete a question
+await ref.read(questionsProvider.notifier).deletePregunta(
+  'question123',
+  'apiary456',
+);
+```
+
+<Warning>
+  **Permanent Deletion**: This operation cannot be undone. Consider implementing a confirmation dialog before deleting questions.
+</Warning>
+
+### Reorder Questions
+
+Updates the display order of multiple questions at once.
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary whose questions are being reordered
+</ParamField>
+
+<ParamField path="order" type="List<String>" required>
+  Ordered list of question IDs. The position in the list determines the new order.
+</ParamField>
+
+**Returns:** `Either<Failure, void>`
+
+**Usage:**
+
+```dart
+// Reorder questions - swap first and second
+final currentOrder = questionsState.preguntas.map((q) => q.id).toList();
+final newOrder = [
+  currentOrder[1],  // Move second to first
+  currentOrder[0],  // Move first to second
+  ...currentOrder.skip(2),  // Keep rest the same
+];
+
+await ref.read(questionsProvider.notifier).reorderPreguntas(
+  'apiary123',
+  newOrder,
+);
+```
+
+<Tip>
+  **Drag and Drop**: This operation is commonly used with drag-and-drop UI components like `ReorderableListView` in Flutter.
+</Tip>
+
+### Load Default Questions
+
+Loads a predefined set of default questions into an apiary. Useful for new apiaries or resetting to standard questions.
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary to load defaults into
+</ParamField>
+
+**Returns:** `Either<Failure, void>`
+
+**Usage:**
+
+```dart
+// Load default questions for a new apiary
+await ref.read(questionsProvider.notifier).loadDefaults('apiary123');
+
+// After loading, the questions list will be automatically refreshed
+```
+
+<Info>
+  **Automatic Refresh**: After loading defaults, the questions list is automatically refreshed to show the new questions.
+</Info>
+
+### Get Question Templates
+
+Retrieves available question templates from the global question bank. Templates can be copied to create new questions.
+
+**Returns:** `Either<Failure, List<Pregunta>>`
+
+**Usage:**
+
+```dart
+// Fetch available templates
+await ref.read(questionsProvider.notifier).fetchTemplates();
+
+// Access templates from state
+final templates = ref.watch(questionsProvider).templates;
+
+// Create a question from a template
+final newQuestion = templates[0].copyWith(
+  id: '',  // Clear ID
+  apiarioId: 'apiary123',  // Set target apiary
+  orden: nextOrder,  // Set appropriate order
+);
+
+await ref.read(questionsProvider.notifier).createPregunta(newQuestion);
+```
+
+## State Management
+
+The monitoring feature uses Riverpod for state management. The `QuestionsController` manages the state and coordinates with the repository.
+
+### QuestionsState
+
+The state object contains:
+
+<ResponseField name="preguntas" type="List<Pregunta>" default="[]">
+  List of questions for the current apiary
+</ResponseField>
+
+<ResponseField name="templates" type="List<Pregunta>" default="[]">
+  List of available question templates
+</ResponseField>
+
+<ResponseField name="isLoading" type="bool" default="false">
+  Whether a loading operation is in progress
+</ResponseField>
+
+<ResponseField name="error" type="String?">
+  Error message if the last operation failed
+</ResponseField>
+
+### Example: Complete CRUD Flow
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:softbee/feature/monitoring/domain/entities/question_model.dart';
+import 'package:softbee/feature/monitoring/presentation/providers/questions_providers.dart';
+
+class QuestionManagementExample extends ConsumerStatefulWidget {
+  final String apiaryId;
+
+  const QuestionManagementExample({required this.apiaryId});
+
+  @override
+  ConsumerState<QuestionManagementExample> createState() =>
+      _QuestionManagementExampleState();
+}
+
+class _QuestionManagementExampleState
+    extends ConsumerState<QuestionManagementExample> {
+  @override
+  void initState() {
+    super.initState();
+    // Load questions on init
+    Future.microtask(() {
+      ref.read(questionsProvider.notifier).fetchPreguntas(widget.apiaryId);
+    });
+  }
+
+  Future<void> _createQuestion() async {
+    final newQuestion = Pregunta(
+      id: '',
+      apiarioId: widget.apiaryId,
+      texto: '¿Nueva pregunta?',
+      tipoRespuesta: 'texto',
+      obligatoria: false,
+      orden: 999,
+    );
+
+    await ref.read(questionsProvider.notifier).createPregunta(newQuestion);
+  }
+
+  Future<void> _updateQuestion(Pregunta question) async {
+    final updated = question.copyWith(
+      texto: 'Pregunta actualizada',
+    );
+
+    await ref.read(questionsProvider.notifier).updatePregunta(updated);
+  }
+
+  Future<void> _deleteQuestion(String id) async {
+    await ref.read(questionsProvider.notifier).deletePregunta(
+      id,
+      widget.apiaryId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(questionsProvider);
+
+    if (state.isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (state.error != null) {
+      return Center(child: Text('Error: ${state.error}'));
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Gestión de Preguntas')),
+      body: ListView.builder(
+        itemCount: state.preguntas.length,
+        itemBuilder: (context, index) {
+          final question = state.preguntas[index];
+          return ListTile(
+            title: Text(question.texto),
+            subtitle: Text('Orden: ${question.orden}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () => _updateQuestion(question),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () => _deleteQuestion(question.id),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _createQuestion,
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+}
+```
+
+## Error Handling
+
+All operations return an `Either<Failure, T>` type, which represents either a failure or a successful result.
+
+```dart
+final result = await repository.getPreguntas('apiary123');
+
+result.fold(
+  (failure) {
+    // Handle error
+    print('Error: ${failure.message}');
+    showSnackbar('No se pudieron cargar las preguntas');
+  },
+  (questions) {
+    // Handle success
+    print('Loaded ${questions.length} questions');
+  },
+);
+```
+
+### Common Failure Types
+
+<ResponseField name="AuthFailure">
+  Authentication failure - usually means no valid token is available
+</ResponseField>
+
+<ResponseField name="ServerFailure">
+  Server error - includes the error message from the API
+</ResponseField>
+
+## Best Practices
+
+<Tip>
+  **Loading States**: Always check `isLoading` before performing operations to prevent duplicate requests.
+</Tip>
+
+<Tip>
+  **Error Display**: Show user-friendly error messages using `state.error` instead of technical error details.
+</Tip>
+
+<Warning>
+  **Automatic Refresh**: Most mutating operations (create, update, delete) automatically refresh the questions list. Don't call `fetchPreguntas` manually after these operations.
+</Warning>

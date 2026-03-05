@@ -1,0 +1,136 @@
+---
+title: 'Auth Entities'
+description: 'Domain entities for the authentication module'
+icon: 'user'
+---
+
+# Authentication Entities
+
+The authentication module contains core domain entities that represent the business objects used throughout the authentication flow.
+
+## User
+
+The `User` entity represents an authenticated user in the Softbee application.
+
+**Location:** `lib/feature/auth/core/entities/user.dart:1`
+
+### Properties
+
+<ParamField path="id" type="String" required>
+  Unique identifier for the user
+</ParamField>
+
+<ParamField path="email" type="String" required>
+  User's email address
+</ParamField>
+
+<ParamField path="username" type="String" required>
+  User's username for display and login purposes
+</ParamField>
+
+<ParamField path="isVerified" type="bool" required>
+  Indicates whether the user's email has been verified
+</ParamField>
+
+<ParamField path="isActive" type="bool" required>
+  Indicates whether the user account is active
+</ParamField>
+
+### Constructor
+
+```dart
+const User({
+  required String id,
+  required String email,
+  required String username,
+  required bool isVerified,
+  required bool isActive,
+});
+```
+
+### Methods
+
+<Expandable title="fromJson">
+  <ParamField path="json" type="Map<String, dynamic>" required>
+    JSON object containing user data
+  </ParamField>
+
+  Factory constructor that creates a `User` instance from a JSON object.
+
+  ```dart
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] ?? '',
+      email: json['email'] ?? '',
+      username: json['username'] ?? '',
+      isVerified: json['is_verified'] ?? false,
+      isActive: json['is_active'] ?? false,
+    );
+  }
+  ```
+</Expandable>
+
+<Expandable title="toJson">
+  <ResponseField name="id" type="String">
+    User's unique identifier
+  </ResponseField>
+
+  <ResponseField name="email" type="String">
+    User's email address
+  </ResponseField>
+
+  <ResponseField name="username" type="String">
+    User's username
+  </ResponseField>
+
+  <ResponseField name="is_verified" type="bool">
+    Email verification status
+  </ResponseField>
+
+  <ResponseField name="is_active" type="bool">
+    Account active status
+  </ResponseField>
+
+  Converts the `User` instance to a JSON object.
+
+  ```dart
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'username': username,
+      'is_verified': isVerified,
+      'is_active': isActive,
+    };
+  }
+  ```
+</Expandable>
+
+## Usage Example
+
+```dart
+// Creating a user from JSON response
+final json = {
+  'id': '123',
+  'email': 'beekeeper@example.com',
+  'username': 'beekeeper',
+  'is_verified': true,
+  'is_active': true,
+};
+
+final user = User.fromJson(json);
+
+// Accessing user properties
+print(user.email); // Output: beekeeper@example.com
+print(user.isVerified); // Output: true
+
+// Converting user to JSON
+final userJson = user.toJson();
+```
+
+## Notes
+
+- The `User` entity is immutable (uses `final` fields and `const` constructor)
+- JSON deserialization provides default values for all fields to prevent null values
+- The JSON field `is_verified` maps to the Dart property `isVerified` (snake_case to camelCase)
+- The JSON field `is_active` maps to the Dart property `isActive`

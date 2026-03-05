@@ -1,0 +1,230 @@
+---
+title: 'Authentication & User Management'
+description: 'User registration, login, password recovery, and account management in Softbee'
+icon: 'user-shield'
+---
+
+## Overview
+
+Softbee provides a complete authentication system that allows beekeepers to create accounts, manage their credentials, and securely access their apiary data. The authentication system is built with JWT tokens and includes password recovery functionality.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="User Registration" icon="user-plus">
+    Create new accounts with email verification and apiary setup
+  </Card>
+  <Card title="Secure Login" icon="lock">
+    Email/username-based authentication with password visibility toggle
+  </Card>
+  <Card title="Password Recovery" icon="key">
+    Reset forgotten passwords via email verification
+  </Card>
+  <Card title="Account Verification" icon="check-circle">
+    Email verification to ensure account authenticity
+  </Card>
+</CardGroup>
+
+## User Entity
+
+The `User` entity represents an authenticated beekeeper in the system:
+
+```dart
+class User {
+  final String id;
+  final String email;
+  final String username;
+  final bool isVerified;
+  final bool isActive;
+}
+```
+
+**Source:** `lib/feature/auth/core/entities/user.dart`
+
+## User Registration Flow
+
+The registration process is designed to collect essential information about the beekeeper and their apiaries in a multi-step workflow.
+
+<Steps>
+  <Step title="Personal Information">
+    Users provide their full name, email, phone number, and password.
+    
+    **Password Requirements:**
+    - Minimum 8 characters
+    - At least one uppercase letter (A-Z)
+    - At least one lowercase letter (a-z)
+    - At least one number (0-9)
+    - At least one special character (@$!%*?&)
+    
+    <Note>
+      The password strength is validated in real-time with visual indicators showing which requirements are met.
+    </Note>
+  </Step>
+  
+  <Step title="Apiary Information">
+    Users can add one or more apiaries during registration:
+    
+    - **Apiary Name**: Unique identifier for the apiary (e.g., "Apiario Las Flores")
+    - **Exact Address**: Full location details (e.g., "Cota, Vereda El Rosal - Finca La Esperanza")
+    - **Treatment Practices**: Whether treatments are applied when bees are sick
+    
+    <Tip>
+      Users can add multiple apiaries during registration and manage them later from the dashboard.
+    </Tip>
+  </Step>
+  
+  <Step title="Account Creation">
+    Upon successful registration:
+    - A user account is created with `isVerified: false`
+    - Associated apiaries are linked to the user
+    - User is automatically logged in
+    - Redirected to the dashboard
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/auth/presentation/pages/register_page.dart:1-1186`
+
+## Login Flow
+
+The login page provides a responsive interface for users to authenticate.
+
+### Authentication Process
+
+<Steps>
+  <Step title="Enter Credentials">
+    Users can log in with:
+    - Email address
+    - Password
+    
+    The password field includes a visibility toggle for user convenience.
+  </Step>
+  
+  <Step title="Validation">
+    Client-side validation ensures:
+    - Email/username is not empty
+    - Password is at least 8 characters
+    
+    Errors are displayed inline with helpful messages.
+  </Step>
+  
+  <Step title="Authentication">
+    The login request is sent to the backend:
+    - JWT token is returned on success
+    - Token is stored locally for subsequent requests
+    - User data is cached
+  </Step>
+  
+  <Step title="Redirect to Dashboard">
+    On successful authentication, users are redirected to `/dashboard`
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/auth/presentation/pages/login_page.dart:1-780`
+
+### Responsive Design
+
+The login page adapts to different screen sizes:
+
+- **Desktop (1024px+)**: Side-by-side layout with branding panel and login form
+- **Tablet/Landscape**: Two-column layout optimized for horizontal screens
+- **Mobile (600px and below)**: Stacked vertical layout with centered content
+
+## Password Recovery
+
+Users who forget their password can initiate a recovery process.
+
+<Steps>
+  <Step title="Request Reset">
+    User enters their email address on the forgot password page.
+  </Step>
+  
+  <Step title="Email Verification">
+    A password reset link is sent to the registered email address.
+  </Step>
+  
+  <Step title="Reset Password">
+    User clicks the link and creates a new password meeting the security requirements.
+  </Step>
+  
+  <Step title="Confirmation">
+    Upon successful reset, user can log in with the new credentials.
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/auth/presentation/pages/forgot_password_page.dart` and `reset_password_page.dart`
+
+## Use Cases
+
+The authentication feature implements several use cases following Clean Architecture principles:
+
+| Use Case | Purpose | Location |
+|----------|---------|----------|
+| `LoginUseCase` | Authenticate user with credentials | `lib/feature/auth/core/usecase/login_usecase.dart` |
+| `RegisterUseCase` | Create new user account | `lib/feature/auth/core/usecase/register_usecase.dart` |
+| `LogoutUseCase` | End user session | `lib/feature/auth/core/usecase/logout_usecase.dart` |
+| `CheckAuthStatusUseCase` | Verify if user is authenticated | `lib/feature/auth/core/usecase/check_auth_status_usecase.dart` |
+| `GetUserFromTokenUseCase` | Retrieve user data from stored token | `lib/feature/auth/core/usecase/get_user_from_token_usecase.dart` |
+
+## UI Components
+
+### Loading State
+
+During login and registration operations, a Lottie animation (`LoadHIVE.json`) is displayed to provide visual feedback.
+
+### Error Handling
+
+Errors are displayed in two ways:
+
+1. **Inline Validation**: Field-level errors appear below the input with red styling
+2. **Alert Dialogs**: Server errors are shown in styled dialogs with icons
+
+### Success Confirmation
+
+Successful registration shows a modal dialog with:
+- Green check icon
+- Success message
+- "Continue" button that redirects to dashboard
+
+## State Management
+
+Authentication state is managed using Riverpod:
+
+```dart
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(...)
+```
+
+The `AuthState` tracks:
+- `isAuthenticated`: Whether user is logged in
+- `user`: Current user data
+- `isLoading`: Loading state for async operations
+- `errorMessage`: Error messages to display
+
+## Security Features
+
+<Info>
+  All passwords are hashed before storage and transmitted over HTTPS. JWT tokens expire after a configurable period and must be refreshed.
+</Info>
+
+- **Token-based authentication**: JWT tokens for stateless auth
+- **Local storage**: Secure token storage on device
+- **Password hashing**: Bcrypt hashing on the backend
+- **Email verification**: Prevents fake account creation
+- **Session management**: Automatic logout on token expiration
+
+## Routes
+
+Authentication-related routes defined in `app_routes.dart`:
+
+- `/login` - Login page
+- `/register` - Registration page  
+- `/forgot-password` - Password recovery request
+- `/reset-password` - Password reset form
+- `/dashboard` - Post-login landing page
+
+## Related Features
+
+Once authenticated, users can access:
+- [Apiaries Management](/features/apiaries) - Manage apiary locations
+- [Beehives](/features/beehives) - Track individual hives
+- [Monitoring](/features/monitoring) - Health and inspection data
+- [Inventory](/features/inventory) - Equipment and supply tracking

@@ -1,0 +1,419 @@
+---
+title: 'Inventory Management'
+description: 'Track beekeeping equipment, supplies, and monitor stock levels across apiaries'
+icon: 'boxes-stacked'
+---
+
+## Overview
+
+The Inventory feature helps beekeepers track equipment, supplies, and consumables used in their beekeeping operations. Each apiary maintains its own inventory, making it easy to know what supplies are available at each location.
+
+## What is Inventory?
+
+In Softbee, inventory refers to all the physical items used in beekeeping operations, including:
+
+- **Equipment**: Hive bodies, frames, protective gear, tools
+- **Consumables**: Treatments, sugar for feeding, foundation wax
+- **Supplies**: Jars, labels, packaging materials
+- **Spare parts**: Queen excluders, inner covers, entrance reducers
+
+## Inventory Item Entity
+
+Each inventory item contains the following information:
+
+```dart
+class InventoryItem {
+  final String id;
+  final String itemName;         // Item description
+  final int quantity;            // Current stock level
+  final String unit;             // Unit of measurement
+  final String apiaryId;         // Associated apiary
+  final String? description;     // Optional details
+  final int minimumStock;        // Low stock threshold
+  final DateTime createdAt;
+  final DateTime updatedAt;
+}
+```
+
+**Source:** `lib/feature/inventory/data/models/inventory_item.dart`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Add Items" icon="plus">
+    Register new equipment and supplies with quantity tracking
+  </Card>
+  <Card title="Update Stock" icon="pen">
+    Modify quantities as items are used or replenished
+  </Card>
+  <Card title="Low Stock Alerts" icon="triangle-exclamation">
+    Visual warnings when inventory falls below minimum levels
+  </Card>
+  <Card title="Multi-Unit Support" icon="scale-balanced">
+    Track items in various units (kg, liters, units, etc.)
+  </Card>
+</CardGroup>
+
+## Units of Measurement
+
+Softbee supports multiple unit types for different inventory items:
+
+| Unit (Spanish) | English Equivalent | Typical Use |
+|----------------|-------------------|-------------|
+| Unidades | Units | Individual items (frames, tools) |
+| Láminas | Sheets | Foundation wax |
+| Pares | Pairs | Gloves, boots |
+| Kilogramos | Kilograms | Sugar, honey |
+| Litros | Liters | Syrup, treatments (liquid) |
+| Metros | Meters | Wire, rope |
+| Cajas | Boxes | Packaging, jars |
+| Gramos | Grams | Small quantities of treatments |
+| Mililitros | Milliliters | Precise liquid measurements |
+| Docenas | Dozens | Jars, labels (bulk) |
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:88-100`
+
+## Adding Inventory Items
+
+Register new items in your apiary's inventory.
+
+<Steps>
+  <Step title="Navigate to Inventory">
+    Select an apiary from your dashboard, then click "Inventario" to access the inventory page.
+  </Step>
+  
+  <Step title="Open Add Dialog">
+    Click "Agregar Nuevo Insumo" (Add New Item) to open the creation form.
+  </Step>
+  
+  <Step title="Enter Item Details">
+    Provide the following information:
+    
+    - **Nombre del insumo**: Item name (e.g., "Traje de apicultor")
+    - **Cantidad**: Current stock quantity
+    - **Unidad de Medida**: Select the appropriate unit from the dropdown
+    - **Descripción**: Optional notes about the item
+    
+    <Note>
+      The minimum stock field is set to 0 by default and is not currently exposed in the UI.
+    </Note>
+  </Step>
+  
+  <Step title="Save Item">
+    Click "Agregar" to create the inventory item. It will appear in the inventory list immediately.
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:384-565`
+
+## Viewing Inventory
+
+The inventory page displays all items for the selected apiary.
+
+### Inventory Header
+
+The header shows:
+
+- **Page title**: "Gestión de Inventario"
+- **Description**: "Administra tus insumos de apiario"
+- **Total item count**: Badge with current inventory count
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:724-810`
+
+### Inventory Cards
+
+Each item is displayed in a card showing:
+
+- **Item icon**: Inventory box icon
+- **Item name**: Primary identifier
+- **Stock level**: Quantity and unit
+- **Low stock indicator**: Warning icon if quantity < 4
+- **Action buttons**: Edit and Delete
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:1039-1155`
+
+### Low Stock Warnings
+
+Items with quantity below 4 are highlighted:
+
+- Red gradient background
+- Red border
+- Warning icon displayed
+- Red text for stock quantity
+
+<Warning>
+  Low stock items require attention. Consider reordering before you run out completely.
+</Warning>
+
+## Updating Inventory
+
+Modify item details or adjust quantities.
+
+<Steps>
+  <Step title="Select Item">
+    Find the item in the inventory list.
+  </Step>
+  
+  <Step title="Click Edit">
+    Click the "Editar" button on the item card to open the edit dialog.
+  </Step>
+  
+  <Step title="Modify Fields">
+    Update any of:
+    - Item name
+    - Quantity (adjust for usage or restocking)
+    - Unit of measurement
+    - Description
+  </Step>
+  
+  <Step title="Save Changes">
+    Click "Actualizar" to save the modifications. The `updatedAt` timestamp is refreshed.
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:284-292`
+
+## Deleting Inventory Items
+
+Remove items no longer needed.
+
+<Steps>
+  <Step title="Select Item">
+    Locate the item in the inventory list.
+  </Step>
+  
+  <Step title="Click Delete">
+    Click the "Eliminar" button on the item card.
+  </Step>
+  
+  <Step title="Confirm Deletion">
+    A warning dialog appears. Confirm to permanently delete the item.
+    
+    <Info>
+      Deletion is permanent and cannot be undone. The item will be removed from all records and reports.
+    </Info>
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:294-382`
+
+## Search Functionality
+
+Quickly find items in large inventories using the search bar.
+
+- **Search by name**: Type any part of the item name
+- **Real-time filtering**: Results update as you type
+- **Case-insensitive**: Matches regardless of capitalization
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:567-578`
+
+## Responsive Layouts
+
+The inventory page adapts to different screen sizes:
+
+### Mobile Layout (600px and below)
+
+- Single column list
+- Compact cards
+- Search and add button at top
+- Vertical scrolling
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:614-630`
+
+### Tablet Layout (600-1250px)
+
+- Side panel with summary statistics
+- Main content area with inventory list
+- Two-column layout
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:632-675`
+
+### Desktop Layout (>1250px)
+
+- Left sidebar with inventory summary
+- Center content with 2-column grid of inventory cards
+- Right sidebar with analytics and alerts
+- Maximum width constraints for readability
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:677-722`
+
+## Inventory Summary Panel
+
+The side panel (tablet/desktop) displays key metrics:
+
+### Summary Cards
+
+<CardGroup cols={3}>
+  <Card title="Total de Insumos" icon="box">
+    Count of all inventory items
+  </Card>
+  <Card title="Stock Bajo" icon="warning">
+    Number of items below minimum stock
+  </Card>
+  <Card title="Stock Total" icon="chart-bar">
+    Sum of all quantities (if applicable)
+  </Card>
+</CardGroup>
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:887-938`
+
+## Analytics Panel (Desktop)
+
+The right sidebar on desktop provides additional insights:
+
+### Statistics
+
+- **Items in stock**: Count of items with quantity > 0
+- **Última actualización**: Timestamp of last inventory change
+
+### Alerts Section
+
+Displays:
+- "Todo en orden" (green) if all items are adequately stocked
+- List of low stock items (orange) if any items need reordering
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:940-991` and `1239-1288`
+
+## State Management
+
+Inventory state is managed with Riverpod:
+
+```dart
+final inventoryControllerProvider = 
+  StateNotifierProvider.family<InventoryController, InventoryState, String>(...)
+```
+
+The family modifier allows separate state for each apiary.
+
+**State includes:**
+- `inventoryItems`: List of all items for the apiary
+- `lowStockItems`: Filtered list of items below threshold
+- `inventorySummary`: Aggregated statistics
+- `isLoading`: Loading indicator
+- `errorMessage`: Error display
+- `isEditing`: Edit mode flag
+- `editingItem`: Currently selected item
+
+**Source:** `lib/feature/inventory/presentation/providers/inventory_controller.dart`
+
+## Data Flow
+
+Following Clean Architecture:
+
+```
+UI (Pages/Widgets)
+       ↓
+InventoryController (Riverpod)
+       ↓
+Use Cases (Business Logic)
+       ↓
+InventoryRepository (Interface)
+       ↓
+InventoryRepositoryImpl
+       ↓
+InventoryRemoteDataSource
+       ↓
+Backend API
+```
+
+**Repository:** `lib/feature/inventory/data/repositories/inventory_repository_impl.dart`
+
+**Data Source:** `lib/feature/inventory/data/datasources/inventory_remote_datasource.dart`
+
+## Common Inventory Items
+
+### Equipment Examples
+
+- Traje de apicultor (Beekeeping suit) - Unidades
+- Guantes (Gloves) - Pares
+- Ahumador (Smoker) - Unidades
+- Palanca de colmena (Hive tool) - Unidades
+- Cuadros con cera (Frames with foundation) - Unidades
+- Láminas de cera (Foundation sheets) - Láminas
+
+### Consumables Examples
+
+- Azúcar para alimentación (Sugar for feeding) - Kilogramos
+- Tratamiento antivarroa (Varroa treatment) - Gramos o Mililitros
+- Jarabe de alimentación (Feeding syrup) - Litros
+
+### Packaging Examples
+
+- Frascos para miel (Honey jars) - Unidades o Docenas
+- Etiquetas (Labels) - Unidades o Docenas
+- Cajas de cartón (Cardboard boxes) - Cajas
+
+## Unit Normalization
+
+The inventory system automatically normalizes unit variations from the backend:
+
+- Backend may send: "unit", "units", "kg", "liter"
+- UI displays canonical forms: "Unidades", "Kilogramos", "Litros"
+
+This ensures consistency in the user interface regardless of API response format.
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:103-154`
+
+## Empty State
+
+When no inventory items exist:
+
+- Large inventory icon (grayed out)
+- "No hay insumos registrados" message
+- "Agregar Insumo" button to create first item
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:1213-1237`
+
+## Error Handling
+
+### Loading State
+
+Displays a loading widget with:
+- Animated spinner
+- "Cargando inventario..." message
+
+### Error State
+
+Shows error widget with:
+- Error message
+- "Retry" button to reload inventory
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:589-603`
+
+### Error Widgets
+
+- **LoadingIndicatorWidget**: Reusable loading component
+- **ErrorDisplayWidget**: Reusable error display with retry
+
+**Source:** `lib/feature/inventory/presentation/widgets/`
+
+## Best Practices
+
+<Tip>
+  Update inventory immediately after using items. This keeps stock levels accurate and helps avoid shortages during critical times.
+</Tip>
+
+- Keep item names descriptive and consistent
+- Use the description field for item-specific notes (size, brand, expiration)
+- Set appropriate units for each item type
+- Review low stock alerts before each beekeeping season
+- Delete items you no longer use to keep inventory clean
+- Consider creating separate items for different sizes/types of the same category
+
+## Integration with Other Features
+
+Inventory integrates with:
+
+- **[Apiaries](/features/apiaries)**: Each apiary has its own inventory
+- **Reports** (future): Inventory usage reports and forecasting
+- **Monitoring** (future): Link inventory use to inspection activities
+
+## Animations
+
+The inventory page uses flutter_animate for smooth transitions:
+
+- **Fade in**: Cards appear with fade effect
+- **Slide in**: Cards slide from right to left
+- **Staggered timing**: Each card animates with slight delay (100ms * index)
+
+**Implementation:** `lib/feature/inventory/presentation/pages/inventory_management_page.dart:1151-1155`

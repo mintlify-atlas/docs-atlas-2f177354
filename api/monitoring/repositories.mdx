@@ -1,0 +1,485 @@
+---
+title: 'Monitoring Repositories'
+description: 'Data layer interfaces and implementations for managing inspection questions'
+icon: 'layer-group'
+---
+
+The monitoring feature follows Clean Architecture principles with a clear separation between domain interfaces and data implementations. This page documents the repository layer that handles data operations for inspection questions.
+
+## Architecture Overview
+
+The repository pattern provides an abstraction layer between the domain and data layers:
+
+- **Domain Layer**: `QuestionRepository` interface defines contracts
+- **Data Layer**: `QuestionRepositoryImpl` implements the interface
+- **Data Source**: `QuestionRemoteDataSource` handles HTTP communication
+
+```dart
+┌─────────────────────────────────────────┐
+│         Presentation Layer              │
+│      (QuestionsController)              │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│          Domain Layer                   │
+│      (QuestionRepository)               │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│          Data Layer                     │
+│    (QuestionRepositoryImpl)             │
+└──────────────┬──────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────┐
+│        Data Source                      │
+│   (QuestionRemoteDataSource)            │
+└─────────────────────────────────────────┘
+```
+
+## QuestionRepository (Interface)
+
+The abstract repository interface defines all operations for managing inspection questions.
+
+**Location:** `lib/feature/monitoring/domain/repositories/question_repository.dart`
+
+### Methods
+
+<ResponseField name="getPreguntas" type="Future<Either<Failure, List<Pregunta>>>">
+  Retrieves all questions for a specific apiary.
+
+  <Expandable title="Parameters">
+    <ParamField path="apiaryId" type="String" required>
+      The ID of the apiary to fetch questions for
+    </ParamField>
+  </Expandable>
+
+  <Expandable title="Returns">
+    Returns `Right(List<Pregunta>)` on success, or `Left(Failure)` on error.
+  </Expandable>
+
+  **Example:**
+  ```dart
+  final result = await repository.getPreguntas('apiary123');
+  result.fold(
+    (failure) => print('Error: ${failure.message}'),
+    (questions) => print('Found ${questions.length} questions'),
+  );
+  ```
+</ResponseField>
+
+<ResponseField name="createPregunta" type="Future<Either<Failure, Pregunta>>">
+  Creates a new inspection question.
+
+  <Expandable title="Parameters">
+    <ParamField path="pregunta" type="Pregunta" required>
+      The question to create. The `id` field can be empty.
+    </ParamField>
+  </Expandable>
+
+  <Expandable title="Returns">
+    Returns `Right(Pregunta)` with the created question (including server-assigned ID), or `Left(Failure)` on error.
+  </Expandable>
+
+  **Example:**
+  ```dart
+  final newQuestion = Pregunta(
+    id: '',
+    apiarioId: 'apiary123',
+    texto: '¿Estado de la colmena?',
+    tipoRespuesta: 'texto',
+    obligatoria: true,
+    orden: 1,
+  );
+
+  final result = await repository.createPregunta(newQuestion);
+  result.fold(
+    (failure) => print('Creation failed: ${failure.message}'),
+    (created) => print('Created with ID: ${created.id}'),
+  );
+  ```
+</ResponseField>
+
+<ResponseField name="updatePregunta" type="Future<Either<Failure, Pregunta>>">
+  Updates an existing inspection question.
+
+  <Expandable title="Parameters">
+    <ParamField path="pregunta" type="Pregunta" required>
+      The question with updated values. Must have a valid `id`.
+    </ParamField>
+  </Expandable>
+
+  <Expandable title="Returns">
+    Returns `Right(Pregunta)` with the updated question, or `Left(Failure)` on error.
+  </Expandable>
+
+  **Example:**
+  ```dart
+  final updated = existingQuestion.copyWith(
+    texto: 'Pregunta actualizada',
+    obligatoria: false,
+  );
+
+  final result = await repository.updatePregunta(updated);
+  ```
+</ResponseField>
+
+<ResponseField name="deletePregunta" type="Future<Either<Failure, void>>">
+  Permanently deletes an inspection question.
+
+  <Expandable title="Parameters">
+    <ParamField path="id" type="String" required>
+      The ID of the question to delete
+    </ParamField>
+  </Expandable>
+
+  <Expandable title="Returns">
+    Returns `Right(null)` on success, or `Left(Failure)` on error.
+  </Expandable>
+
+  **Example:**
+  ```dart
+  final result = await repository.deletePregunta('question123');
+  result.fold(
+    (failure) => showError('No se pudo eliminar'),
+    (_) => showSuccess('Pregunta eliminada'),
+  );
+  ```
+</ResponseField>
+
+<ResponseField name="reorderPreguntas" type="Future<Either<Failure, void>>">
+  Updates the display order of multiple questions.
+
+  <Expandable title="Parameters">
+    <ParamField path="apiaryId" type="String" required>
+      The ID of the apiary whose questions are being reordered
+    </ParamField>
+    <ParamField path="order" type="List<String>" required>
+      Ordered list of question IDs
+    </ParamField>
+  </Expandable>
+
+  **Example:**
+  ```dart
+  final newOrder = ['q3', 'q1', 'q2'];  // Reorder questions
+  final result = await repository.reorderPreguntas('apiary123', newOrder);
+  ```
+</ResponseField>
+
+<ResponseField name="loadDefaults" type="Future<Either<Failure, void>>">
+  Loads default questions into an apiary from the question bank.
+
+  <Expandable title="Parameters">
+    <ParamField path="apiaryId" type="String" required>
+      The ID of the apiary to load defaults into
+    </ParamField>
+  </Expandable>
+
+  **Example:**
+  ```dart
+  final result = await repository.loadDefaults('apiary123');
+  result.fold(
+    (failure) => print('Failed to load defaults'),
+    (_) => print('Default questions loaded successfully'),
+  );
+  ```
+</ResponseField>
+
+<ResponseField name="getTemplates" type="Future<Either<Failure, List<Pregunta>>>">
+  Retrieves available question templates from the global question bank.
+
+  <Expandable title="Returns">
+    Returns `Right(List<Pregunta>)` with template questions, or `Left(Failure)` on error.
+  </Expandable>
+
+  **Example:**
+  ```dart
+  final result = await repository.getTemplates();
+  result.fold(
+    (failure) => print('Failed to load templates'),
+    (templates) => print('Found ${templates.length} templates'),
+  );
+  ```
+</ResponseField>
+
+## QuestionRepositoryImpl (Implementation)
+
+The concrete implementation of the repository interface that handles authentication and delegates to the remote data source.
+
+**Location:** `lib/feature/monitoring/data/repositories/question_repository_impl.dart`
+
+### Dependencies
+
+<ParamField path="remoteDataSource" type="QuestionRemoteDataSource" required>
+  The data source that handles HTTP requests
+</ParamField>
+
+<ParamField path="localDataSource" type="AuthLocalDataSource" required>
+  The local data source for retrieving authentication tokens
+</ParamField>
+
+### Constructor
+
+```dart
+final repository = QuestionRepositoryImpl(
+  remoteDataSource: questionRemoteDataSource,
+  localDataSource: authLocalDataSource,
+);
+```
+
+### Implementation Details
+
+Each method follows this pattern:
+
+1. Retrieve authentication token from local storage
+2. Validate token exists
+3. Call remote data source with token
+4. Handle exceptions and map to failures
+5. Return Either result
+
+**Example Implementation:**
+
+```dart
+@override
+Future<Either<Failure, List<Pregunta>>> getPreguntas(String apiaryId) async {
+  try {
+    // Step 1 & 2: Get and validate token
+    final token = await localDataSource.getToken();
+    if (token == null) return const Left(AuthFailure('No token found'));
+    
+    // Step 3: Call data source
+    final result = await remoteDataSource.getPreguntas(apiaryId, token);
+    
+    // Step 5: Return success
+    return Right(result);
+  } catch (e) {
+    // Step 4: Handle errors
+    return Left(ServerFailure(e.toString()));
+  }
+}
+```
+
+### Error Handling
+
+The implementation handles two main error types:
+
+<ResponseField name="AuthFailure">
+  Returned when no authentication token is available in local storage.
+  
+  **Resolution:** User needs to log in again.
+</ResponseField>
+
+<ResponseField name="ServerFailure">
+  Returned when any exception occurs during the operation (network errors, API errors, etc.).
+  
+  **Message:** Contains the exception message for debugging.
+</ResponseField>
+
+## QuestionRemoteDataSource
+
+Handles direct HTTP communication with the backend API.
+
+**Location:** `lib/feature/monitoring/data/datasources/question_remote_datasource.dart`
+
+### API Endpoints
+
+<ResponseField name="GET /api/v1/questions/apiary/:apiaryId">
+  Fetches all questions for an apiary
+  
+  **Headers:** `Authorization: Bearer {token}`
+  
+  **Response:** Array of question objects
+</ResponseField>
+
+<ResponseField name="POST /api/v1/questions">
+  Creates a new question
+  
+  **Headers:** `Authorization: Bearer {token}`
+  
+  **Body:** Question object (JSON)
+  
+  **Response:** Created question with ID
+</ResponseField>
+
+<ResponseField name="PUT /api/v1/questions/:id">
+  Updates an existing question
+  
+  **Headers:** `Authorization: Bearer {token}`
+  
+  **Body:** Updated question object (JSON)
+  
+  **Response:** Updated question
+</ResponseField>
+
+<ResponseField name="DELETE /api/v1/questions/:id">
+  Deletes a question
+  
+  **Headers:** `Authorization: Bearer {token}`
+  
+  **Response:** No content (204)
+</ResponseField>
+
+<ResponseField name="PUT /api/v1/questions/apiary/:apiaryId/reorder">
+  Reorders questions
+  
+  **Headers:** `Authorization: Bearer {token}`
+  
+  **Body:** `{ "order": ["id1", "id2", "id3"] }`
+  
+  **Response:** No content (204)
+</ResponseField>
+
+<ResponseField name="POST /api/v1/questions/load_defaults/:apiaryId">
+  Loads default questions
+  
+  **Headers:** `Authorization: Bearer {token}`
+  
+  **Response:** No content (204)
+</ResponseField>
+
+<ResponseField name="GET /api/v1/questions/templates">
+  Fetches question templates
+  
+  **Headers:** `Authorization: Bearer {token}`
+  
+  **Response:** Array of template questions
+</ResponseField>
+
+### Implementation Example
+
+```dart
+@override
+Future<List<Pregunta>> getPreguntas(String apiaryId, String token) async {
+  try {
+    final response = await httpClient.get(
+      '/api/v1/questions/apiary/$apiaryId',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+    
+    final List<dynamic> data = response.data as List<dynamic>;
+    return data
+        .map<Pregunta>(
+          (json) => Pregunta.fromJson(Map<String, dynamic>.from(json)),
+        )
+        .toList();
+  } on DioException catch (e) {
+    throw Exception(
+      e.response?.data['message'] ?? 'Error obteniendo preguntas',
+    );
+  }
+}
+```
+
+## Dependency Injection
+
+The repository and its dependencies are typically registered with a dependency injection container (e.g., Riverpod providers).
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+
+// Data source providers
+final dioProvider = Provider<Dio>((ref) => Dio(BaseOptions(
+  baseUrl: 'https://api.softbee.app',
+)));
+
+final questionRemoteDataSourceProvider = Provider<QuestionRemoteDataSource>(
+  (ref) => QuestionRemoteDataSourceImpl(ref.watch(dioProvider)),
+);
+
+// Repository provider
+final questionRepositoryProvider = Provider<QuestionRepository>(
+  (ref) => QuestionRepositoryImpl(
+    remoteDataSource: ref.watch(questionRemoteDataSourceProvider),
+    localDataSource: ref.watch(authLocalDataSourceProvider),
+  ),
+);
+
+// Controller provider
+final questionsProvider = StateNotifierProvider<QuestionsController, QuestionsState>(
+  (ref) => QuestionsController(ref.watch(questionRepositoryProvider)),
+);
+```
+
+## Testing
+
+### Mocking the Repository
+
+```dart
+import 'package:mocktail/mocktail.dart';
+
+class MockQuestionRepository extends Mock implements QuestionRepository {}
+
+void main() {
+  late MockQuestionRepository mockRepository;
+  late QuestionsController controller;
+
+  setUp(() {
+    mockRepository = MockQuestionRepository();
+    controller = QuestionsController(mockRepository);
+  });
+
+  test('fetchPreguntas loads questions successfully', () async {
+    // Arrange
+    final questions = [
+      Pregunta(
+        id: '1',
+        apiarioId: 'apiary123',
+        texto: 'Test question',
+        tipoRespuesta: 'texto',
+        obligatoria: true,
+        orden: 1,
+      ),
+    ];
+    
+    when(() => mockRepository.getPreguntas('apiary123'))
+        .thenAnswer((_) async => Right(questions));
+
+    // Act
+    await controller.fetchPreguntas('apiary123');
+
+    // Assert
+    expect(controller.state.preguntas, questions);
+    expect(controller.state.isLoading, false);
+    expect(controller.state.error, null);
+  });
+
+  test('fetchPreguntas handles errors', () async {
+    // Arrange
+    when(() => mockRepository.getPreguntas('apiary123'))
+        .thenAnswer((_) async => Left(ServerFailure('Network error')));
+
+    // Act
+    await controller.fetchPreguntas('apiary123');
+
+    // Assert
+    expect(controller.state.error, 'Network error');
+    expect(controller.state.isLoading, false);
+  });
+}
+```
+
+## Best Practices
+
+<Tip>
+  **Interface Programming**: Always program against the `QuestionRepository` interface, not the implementation. This enables easy testing and future changes.
+</Tip>
+
+<Tip>
+  **Token Management**: The repository handles token retrieval automatically. Never pass tokens directly from the presentation layer.
+</Tip>
+
+<Warning>
+  **Error Messages**: Server failures include the raw exception message. Consider mapping these to user-friendly messages in the presentation layer.
+</Warning>
+
+<Info>
+  **Template Mapping**: The `getTemplates` method handles multiple response formats from the API (both Spanish and English field names) for maximum compatibility.
+</Info>
+
+## Related Resources
+
+- [Monitoring Entities](/api/monitoring/entities) - Entity definitions and usage
+- [Monitoring Use Cases](/api/monitoring/usecases) - Business logic operations

@@ -1,0 +1,402 @@
+---
+title: 'Apiary Use Cases'
+description: 'Business logic use cases for managing apiaries in the Softbee application'
+---
+
+## Overview
+
+Use cases implement the business logic for apiary management operations in the Softbee application. Following Clean Architecture principles, these use cases orchestrate the flow of data between the presentation layer and the repository layer.
+
+All use cases follow the `UseCase` interface pattern and return `Either<Failure, T>` types for functional error handling.
+
+**Source:** `lib/feature/apiaries/domain/usecases/`
+
+## GetApiariesUseCase
+
+Retrieves all apiaries for the authenticated user.
+
+**Source:** `lib/feature/apiaries/domain/usecases/get_apiaries.dart`
+
+### Class Definition
+
+```dart
+class GetApiariesUseCase implements UseCase<List<Apiary>, NoParams> {
+  final ApiaryRepository repository;
+
+  GetApiariesUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, List<Apiary>>> call(NoParams params) async {
+    return await repository.getApiaries();
+  }
+}
+```
+
+### Parameters
+
+<ParamField path="params" type="NoParams" required>
+  This use case requires no parameters. Pass `NoParams()` when calling.
+</ParamField>
+
+### Returns
+
+<ResponseField name="Success" type="Right<List<Apiary>>">
+  A list of all apiaries belonging to the authenticated user.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found
+  - `ServerFailure`: Network or server error occurred
+</ResponseField>
+
+### Usage Example
+
+```dart
+final getApiaries = GetApiariesUseCase(apiaryRepository);
+
+final result = await getApiaries(NoParams());
+
+result.fold(
+  (failure) {
+    // Handle error
+    if (failure is AuthFailure) {
+      print('User not authenticated');
+    } else if (failure is ServerFailure) {
+      print('Server error: ${failure.message}');
+    }
+  },
+  (apiaries) {
+    // Success - display apiaries
+    print('Found ${apiaries.length} apiaries');
+    for (var apiary in apiaries) {
+      print('${apiary.name}: ${apiary.beehivesCount} hives');
+    }
+  },
+);
+```
+
+---
+
+## CreateApiaryUseCase
+
+Creates a new apiary for the user.
+
+**Source:** `lib/feature/apiaries/domain/usecases/create_apiary_usecase.dart`
+
+### Class Definition
+
+```dart
+class CreateApiaryUseCase implements UseCase<Apiary, CreateApiaryParams> {
+  final ApiaryRepository repository;
+
+  CreateApiaryUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, Apiary>> call(CreateApiaryParams params) async {
+    return await repository.createApiary(
+      params.userId,
+      params.name,
+      params.location,
+      params.beehivesCount,
+      params.treatments,
+    );
+  }
+}
+```
+
+### Parameters
+
+The use case accepts a `CreateApiaryParams` object:
+
+<ParamField path="userId" type="String" required>
+  The ID of the user creating the apiary. Used for ownership and authorization.
+</ParamField>
+
+<ParamField path="name" type="String" required>
+  The name of the new apiary. Must be a non-empty string.
+</ParamField>
+
+<ParamField path="location" type="String?" default="null">
+  Optional location or address of the apiary.
+</ParamField>
+
+<ParamField path="beehivesCount" type="int?" default="null">
+  Optional initial count of beehives in the apiary.
+</ParamField>
+
+<ParamField path="treatments" type="bool" required>
+  Whether treatments are being applied to beehives in this apiary.
+</ParamField>
+
+### Returns
+
+<ResponseField name="Success" type="Right<Apiary>">
+  The newly created apiary with server-generated ID and timestamps.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found
+  - `ServerFailure`: Network or server error occurred
+  - `ValidationFailure`: Invalid input parameters
+</ResponseField>
+
+### Usage Example
+
+```dart
+final createApiary = CreateApiaryUseCase(apiaryRepository);
+
+final params = CreateApiaryParams(
+  userId: 'user_123',
+  name: 'Sunset Apiary',
+  location: '456 Meadow Lane',
+  beehivesCount: 10,
+  treatments: false,
+);
+
+final result = await createApiary(params);
+
+result.fold(
+  (failure) {
+    print('Failed to create apiary: ${failure.message}');
+  },
+  (apiary) {
+    print('Created apiary: ${apiary.name} (ID: ${apiary.id})');
+  },
+);
+```
+
+---
+
+## UpdateApiaryUseCase
+
+Updates an existing apiary's information.
+
+**Source:** `lib/feature/apiaries/domain/usecases/update_apiary_usecase.dart`
+
+### Class Definition
+
+```dart
+class UpdateApiaryUseCase implements UseCase<Apiary, UpdateApiaryParams> {
+  final ApiaryRepository repository;
+
+  UpdateApiaryUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, Apiary>> call(UpdateApiaryParams params) async {
+    return await repository.updateApiary(
+      params.apiaryId,
+      params.userId,
+      params.name,
+      params.location,
+      params.beehivesCount,
+      params.treatments,
+    );
+  }
+}
+```
+
+### Parameters
+
+The use case accepts an `UpdateApiaryParams` object:
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary to update.
+</ParamField>
+
+<ParamField path="userId" type="String" required>
+  The ID of the user performing the update. Used for authorization to ensure only the owner can update.
+</ParamField>
+
+<ParamField path="name" type="String?" default="null">
+  New name for the apiary. If null, the name is not updated.
+</ParamField>
+
+<ParamField path="location" type="String?" default="null">
+  New location for the apiary. If null, the location is not updated.
+</ParamField>
+
+<ParamField path="beehivesCount" type="int?" default="null">
+  New beehive count. If null, the count is not updated.
+</ParamField>
+
+<ParamField path="treatments" type="bool?" default="null">
+  New treatments status. If null, the status is not updated.
+</ParamField>
+
+### Returns
+
+<ResponseField name="Success" type="Right<Apiary>">
+  The updated apiary entity with all current values.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found or user not authorized
+  - `ServerFailure`: Network or server error occurred
+  - `NotFoundFailure`: Apiary with the given ID does not exist
+</ResponseField>
+
+### Usage Example
+
+```dart
+final updateApiary = UpdateApiaryUseCase(apiaryRepository);
+
+final params = UpdateApiaryParams(
+  apiaryId: 'apiary_123',
+  userId: 'user_123',
+  name: 'Sunset Apiary - Expanded',
+  beehivesCount: 15,
+  treatments: true,
+);
+
+final result = await updateApiary(params);
+
+result.fold(
+  (failure) {
+    if (failure is NotFoundFailure) {
+      print('Apiary not found');
+    } else {
+      print('Update failed: ${failure.message}');
+    }
+  },
+  (apiary) {
+    print('Updated apiary: ${apiary.name}');
+    print('New hive count: ${apiary.beehivesCount}');
+  },
+);
+```
+
+---
+
+## DeleteApiaryUseCase
+
+Deletes an apiary from the system.
+
+**Source:** `lib/feature/apiaries/domain/usecases/delete_apiary_usecase.dart`
+
+### Class Definition
+
+```dart
+class DeleteApiaryUseCase implements UseCase<void, DeleteApiaryParams> {
+  final ApiaryRepository repository;
+
+  DeleteApiaryUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, void>> call(DeleteApiaryParams params) async {
+    return await repository.deleteApiary(params.apiaryId, params.userId);
+  }
+}
+```
+
+### Parameters
+
+The use case accepts a `DeleteApiaryParams` object:
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary to delete.
+</ParamField>
+
+<ParamField path="userId" type="String" required>
+  The ID of the user performing the deletion. Used for authorization to ensure only the owner can delete.
+</ParamField>
+
+### Returns
+
+<ResponseField name="Success" type="Right<void>">
+  Returns void on successful deletion.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found or user not authorized
+  - `ServerFailure`: Network or server error occurred
+  - `NotFoundFailure`: Apiary with the given ID does not exist
+</ResponseField>
+
+### Usage Example
+
+```dart
+final deleteApiary = DeleteApiaryUseCase(apiaryRepository);
+
+final params = DeleteApiaryParams(
+  apiaryId: 'apiary_123',
+  userId: 'user_123',
+);
+
+final result = await deleteApiary(params);
+
+result.fold(
+  (failure) {
+    print('Deletion failed: ${failure.message}');
+  },
+  (_) {
+    print('Apiary successfully deleted');
+  },
+);
+```
+
+---
+
+## Dependency Injection
+
+All use cases require an `ApiaryRepository` instance. Here's how to set up dependency injection:
+
+```dart
+import 'package:get_it/get_it.dart';
+
+final getIt = GetIt.instance;
+
+void setupApiaryDependencies() {
+  // Register repository
+  getIt.registerLazySingleton<ApiaryRepository>(
+    () => ApiaryRepositoryImpl(
+      remoteDataSource: getIt(),
+      localDataSource: getIt(),
+    ),
+  );
+
+  // Register use cases
+  getIt.registerLazySingleton(() => GetApiariesUseCase(getIt()));
+  getIt.registerLazySingleton(() => CreateApiaryUseCase(getIt()));
+  getIt.registerLazySingleton(() => UpdateApiaryUseCase(getIt()));
+  getIt.registerLazySingleton(() => DeleteApiaryUseCase(getIt()));
+}
+```
+
+## Error Handling
+
+All use cases return `Either<Failure, T>` for functional error handling. Common failure types:
+
+<Expandable title="AuthFailure">
+  Indicates authentication issues, such as missing or invalid tokens. The user should be redirected to login.
+  
+  ```dart
+  if (failure is AuthFailure) {
+    Navigator.pushReplacementNamed(context, '/login');
+  }
+  ```
+</Expandable>
+
+<Expandable title="ServerFailure">
+  Indicates network or server errors. Display an appropriate error message to the user.
+  
+  ```dart
+  if (failure is ServerFailure) {
+    showErrorSnackbar('Server error. Please try again later.');
+  }
+  ```
+</Expandable>
+
+<Expandable title="NotFoundFailure">
+  Indicates the requested resource was not found. This may occur when trying to update or delete a non-existent apiary.
+  
+  ```dart
+  if (failure is NotFoundFailure) {
+    showErrorSnackbar('Apiary not found.');
+  }
+  ```
+</Expandable>
+
+## Related
+
+- [Apiary Entity](/api/apiaries/entities) - The core apiary domain entity
+- [Repository](/api/apiaries/repositories) - Data access layer for apiaries

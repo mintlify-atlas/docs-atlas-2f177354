@@ -1,0 +1,389 @@
+---
+title: 'Auth Repositories'
+description: 'Repository interfaces and implementations for authentication data management'
+icon: 'database'
+---
+
+# Authentication Repositories
+
+Repositories provide an abstraction layer for data operations, implementing the Repository pattern from Clean Architecture. They coordinate between data sources and use cases.
+
+## AuthRepository (Interface)
+
+Defines the contract for authentication data operations.
+
+**Location:** `lib/feature/auth/core/repositories/auth_repository.dart:6`
+
+### Methods
+
+<Expandable title="registerUser">
+  <ParamField path="username" type="String" required>
+    User's username
+  </ParamField>
+
+  <ParamField path="email" type="String" required>
+    User's email address
+  </ParamField>
+
+  <ParamField path="phone" type="String" required>
+    User's phone number
+  </ParamField>
+
+  <ParamField path="password" type="String" required>
+    User's password
+  </ParamField>
+
+  <ResponseField name="Either<Failure, Map<String, dynamic>>" type="Future">
+    Returns registration response data on success, or a failure on error
+  </ResponseField>
+
+  Registers a new user in the system.
+
+  ```dart
+  Future<Either<Failure, Map<String, dynamic>>> registerUser(
+    String username,
+    String email,
+    String phone,
+    String password,
+  );
+  ```
+</Expandable>
+
+<Expandable title="login">
+  <ParamField path="email" type="String" required>
+    User's email address
+  </ParamField>
+
+  <ParamField path="password" type="String" required>
+    User's password
+  </ParamField>
+
+  <ResponseField name="Either<Failure, String>" type="Future">
+    Returns authentication token on success, or a failure on error
+  </ResponseField>
+
+  Authenticates a user and returns an authentication token.
+
+  ```dart
+  Future<Either<Failure, String>> login(String email, String password);
+  ```
+</Expandable>
+
+<Expandable title="logout">
+  <ResponseField name="Either<Failure, void>" type="Future">
+    Returns success or failure
+  </ResponseField>
+
+  Logs out the current user and clears stored tokens.
+
+  ```dart
+  Future<Either<Failure, void>> logout();
+  ```
+</Expandable>
+
+<Expandable title="checkAuthStatus">
+  <ResponseField name="Either<Failure, User?>" type="Future">
+    Returns the authenticated user if a valid session exists, null if not authenticated, or a failure on error
+  </ResponseField>
+
+  Checks the current authentication status and retrieves the authenticated user.
+
+  ```dart
+  Future<Either<Failure, User?>> checkAuthStatus();
+  ```
+</Expandable>
+
+<Expandable title="getUserFromToken">
+  <ParamField path="token" type="String" required>
+    Authentication token
+  </ParamField>
+
+  <ResponseField name="Either<Failure, User>" type="Future">
+    Returns the user associated with the token, or a failure on error
+  </ResponseField>
+
+  Retrieves user information from an authentication token.
+
+  ```dart
+  Future<Either<Failure, User>> getUserFromToken(String token);
+  ```
+</Expandable>
+
+<Expandable title="createApiary">
+  <ParamField path="userId" type="String" required>
+    User's unique identifier
+  </ParamField>
+
+  <ParamField path="apiaryName" type="String" required>
+    Name for the new apiary
+  </ParamField>
+
+  <ParamField path="location" type="String" required>
+    Geographic location of the apiary
+  </ParamField>
+
+  <ParamField path="beehivesCount" type="int" required>
+    Number of beehives in the apiary
+  </ParamField>
+
+  <ParamField path="treatments" type="bool" required>
+    Whether treatments are applied
+  </ParamField>
+
+  <ParamField path="token" type="String" required>
+    Authentication token
+  </ParamField>
+
+  <ResponseField name="Either<Failure, void>" type="Future">
+    Returns success or failure
+  </ResponseField>
+
+  Creates a new apiary during the user onboarding process.
+
+  ```dart
+  Future<Either<Failure, void>> createApiary(
+    String userId,
+    String apiaryName,
+    String location,
+    int beehivesCount,
+    bool treatments,
+    String token,
+  );
+  ```
+</Expandable>
+
+---
+
+## AuthRepositoryImpl
+
+Concrete implementation of `AuthRepository` that coordinates between remote and local data sources.
+
+**Location:** `lib/feature/auth/data/repositories/auth_repository_impl.dart:11`
+
+### Constructor
+
+<ParamField path="remoteDataSource" type="AuthRemoteDataSource" required>
+  Handles remote API calls
+</ParamField>
+
+<ParamField path="localDataSource" type="AuthLocalDataSource" required>
+  Handles local storage operations (tokens, user data)
+</ParamField>
+
+```dart
+AuthRepositoryImpl({
+  required AuthRemoteDataSource remoteDataSource,
+  required AuthLocalDataSource localDataSource,
+});
+```
+
+### Implementation Details
+
+<Expandable title="registerUser Implementation">
+  Calls the remote data source to register a new user.
+
+  ```dart
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> registerUser(
+    String username,
+    String email,
+    String phone,
+    String password,
+  ) async {
+    try {
+      final result = await remoteDataSource.registerUser(
+        username,
+        email,
+        phone,
+        password,
+      );
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+  ```
+
+  **Error Handling:** Catches exceptions and returns `ServerFailure`
+</Expandable>
+
+<Expandable title="login Implementation">
+  Authenticates with remote API and stores the token locally.
+
+  ```dart
+  @override
+  Future<Either<Failure, String>> login(String email, String password) async {
+    try {
+      final token = await remoteDataSource.login(email, password);
+      await localDataSource.saveToken(token);
+      return Right(token);
+    } catch (e) {
+      return const Left(ServerFailure('Error al iniciar sesión'));
+    }
+  }
+  ```
+
+  **Flow:**
+  1. Calls remote API to authenticate
+  2. Saves token to local storage on success
+  3. Returns token to caller
+
+  **Error Handling:** Returns `ServerFailure` with localized error message
+</Expandable>
+
+<Expandable title="checkAuthStatus Implementation">
+  Checks local token and validates it with the remote API.
+
+  ```dart
+  @override
+  Future<Either<Failure, User?>> checkAuthStatus() async {
+    try {
+      final token = await localDataSource.getToken();
+      if (token == null) {
+        return const Right(null);
+      }
+      final user = await remoteDataSource.getUserFromToken(token);
+      return Right(user);
+    } catch (e) {
+      await localDataSource.deleteToken();
+      await localDataSource.deleteUser();
+      return const Left(AuthFailure('Session expired. Please log in again.'));
+    }
+  }
+  ```
+
+  **Flow:**
+  1. Retrieves token from local storage
+  2. Returns `null` if no token exists
+  3. Validates token with remote API
+  4. Returns user if token is valid
+  5. Clears local data if token is invalid/expired
+
+  **Error Handling:** Cleans up local storage and returns `AuthFailure` for expired sessions
+</Expandable>
+
+<Expandable title="logout Implementation">
+  Logs out from remote API and clears local storage.
+
+  ```dart
+  @override
+  Future<Either<Failure, void>> logout() async {
+    try {
+      await remoteDataSource.logout();
+      await localDataSource.deleteToken();
+      await localDataSource.deleteUser();
+      return const Right(null);
+    } catch (e) {
+      return const Left(ServerFailure('Error during logout'));
+    }
+  }
+  ```
+
+  **Flow:**
+  1. Calls remote API to invalidate session
+  2. Deletes stored token
+  3. Deletes stored user data
+
+  **Error Handling:** Returns `ServerFailure` if logout fails
+</Expandable>
+
+<Expandable title="getUserFromToken Implementation">
+  Retrieves user information from a token via remote API.
+
+  ```dart
+  @override
+  Future<Either<Failure, User>> getUserFromToken(String token) async {
+    try {
+      final user = await remoteDataSource.getUserFromToken(token);
+      return Right(user);
+    } catch (e) {
+      return const Left(ServerFailure('Error al obtener usuario del token'));
+    }
+  }
+  ```
+
+  **Error Handling:** Returns `ServerFailure` with localized error message
+</Expandable>
+
+<Expandable title="createApiary Implementation">
+  Creates a new apiary via remote API during onboarding.
+
+  ```dart
+  @override
+  Future<Either<Failure, void>> createApiary(
+    String userId,
+    String apiaryName,
+    String location,
+    int beehivesCount,
+    bool treatments,
+    String token,
+  ) async {
+    try {
+      await remoteDataSource.createApiary(
+        userId,
+        apiaryName,
+        location,
+        beehivesCount,
+        treatments,
+        token,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+  ```
+
+  **Error Handling:** Catches exceptions and returns `ServerFailure` with error details
+</Expandable>
+
+## Usage Example
+
+```dart
+// Dependency injection setup
+final remoteDataSource = AuthRemoteDataSourceImpl(client: httpClient);
+final localDataSource = AuthLocalDataSourceImpl(storage: secureStorage);
+
+final authRepository = AuthRepositoryImpl(
+  remoteDataSource: remoteDataSource,
+  localDataSource: localDataSource,
+);
+
+// Using the repository
+final result = await authRepository.login(
+  'user@example.com',
+  'password123',
+);
+
+result.fold(
+  (failure) => print('Login failed: ${failure.message}'),
+  (token) => print('Login successful: $token'),
+);
+```
+
+## Data Sources
+
+The repository implementation depends on two data sources:
+
+### AuthRemoteDataSource
+
+**Location:** `lib/feature/auth/data/datasources/auth_remote_datasource.dart`
+
+Handles all remote API calls for authentication operations.
+
+### AuthLocalDataSource
+
+**Location:** `lib/feature/auth/data/datasources/auth_local_datasource.dart`
+
+Handles local storage operations for:
+- Authentication tokens
+- User data caching
+- Session persistence
+
+## Architecture Notes
+
+- **Separation of Concerns:** The repository coordinates between remote API calls and local storage
+- **Error Handling:** All methods use the `Either` type for functional error handling
+- **Token Management:** Tokens are automatically stored locally after successful login
+- **Session Cleanup:** Failed authentication checks trigger automatic cleanup of local data
+- **Type Safety:** Strong typing ensures compile-time safety for all operations

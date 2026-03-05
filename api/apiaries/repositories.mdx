@@ -1,0 +1,490 @@
+---
+title: 'Apiary Repository'
+description: 'Data access layer for apiary operations in the Softbee application'
+---
+
+## Overview
+
+The Apiary repository provides the data access layer for managing apiaries in the Softbee application. Following Clean Architecture principles, it defines an abstract interface in the domain layer and a concrete implementation in the data layer.
+
+The repository handles:
+- Authentication token management
+- Communication with remote data sources
+- Error handling and failure mapping
+- Data transformation between layers
+
+## Repository Interface
+
+**Source:** `lib/feature/apiaries/domain/repositories/apiary_repository.dart`
+
+### Definition
+
+```dart
+abstract class ApiaryRepository {
+  Future<Either<Failure, List<Apiary>>> getApiaries();
+  
+  Future<Either<Failure, Apiary>> createApiary(
+    String userId,
+    String name,
+    String? location,
+    int? beehivesCount,
+    bool treatments,
+  );
+  
+  Future<Either<Failure, Apiary>> updateApiary(
+    String apiaryId,
+    String userId,
+    String? name,
+    String? location,
+    int? beehivesCount,
+    bool? treatments,
+  );
+  
+  Future<Either<Failure, void>> deleteApiary(
+    String apiaryId,
+    String userId,
+  );
+}
+```
+
+### Methods
+
+#### getApiaries
+
+Retrieves all apiaries for the authenticated user.
+
+```dart
+Future<Either<Failure, List<Apiary>>> getApiaries()
+```
+
+<ResponseField name="Success" type="Right<List<Apiary>>">
+  A list of all apiaries belonging to the authenticated user.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found
+  - `ServerFailure`: Network or server error
+</ResponseField>
+
+#### createApiary
+
+Creates a new apiary.
+
+```dart
+Future<Either<Failure, Apiary>> createApiary(
+  String userId,
+  String name,
+  String? location,
+  int? beehivesCount,
+  bool treatments,
+)
+```
+
+<ParamField path="userId" type="String" required>
+  The ID of the user creating the apiary.
+</ParamField>
+
+<ParamField path="name" type="String" required>
+  The name of the new apiary.
+</ParamField>
+
+<ParamField path="location" type="String?" default="null">
+  Optional location of the apiary.
+</ParamField>
+
+<ParamField path="beehivesCount" type="int?" default="null">
+  Optional initial beehive count.
+</ParamField>
+
+<ParamField path="treatments" type="bool" required>
+  Whether treatments are being applied.
+</ParamField>
+
+<ResponseField name="Success" type="Right<Apiary>">
+  The newly created apiary.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found
+  - `ServerFailure`: Network or server error
+</ResponseField>
+
+#### updateApiary
+
+Updates an existing apiary.
+
+```dart
+Future<Either<Failure, Apiary>> updateApiary(
+  String apiaryId,
+  String userId,
+  String? name,
+  String? location,
+  int? beehivesCount,
+  bool? treatments,
+)
+```
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary to update.
+</ParamField>
+
+<ParamField path="userId" type="String" required>
+  The ID of the user performing the update (for authorization).
+</ParamField>
+
+<ParamField path="name" type="String?" default="null">
+  New name for the apiary (null = no change).
+</ParamField>
+
+<ParamField path="location" type="String?" default="null">
+  New location (null = no change).
+</ParamField>
+
+<ParamField path="beehivesCount" type="int?" default="null">
+  New beehive count (null = no change).
+</ParamField>
+
+<ParamField path="treatments" type="bool?" default="null">
+  New treatments status (null = no change).
+</ParamField>
+
+<ResponseField name="Success" type="Right<Apiary>">
+  The updated apiary.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found or unauthorized
+  - `ServerFailure`: Network or server error
+  - `NotFoundFailure`: Apiary not found
+</ResponseField>
+
+#### deleteApiary
+
+Deletes an apiary.
+
+```dart
+Future<Either<Failure, void>> deleteApiary(
+  String apiaryId,
+  String userId,
+)
+```
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary to delete.
+</ParamField>
+
+<ParamField path="userId" type="String" required>
+  The ID of the user performing the deletion (for authorization).
+</ParamField>
+
+<ResponseField name="Success" type="Right<void>">
+  Void on successful deletion.
+</ResponseField>
+
+<ResponseField name="Failure" type="Left<Failure>">
+  - `AuthFailure`: No authentication token found or unauthorized
+  - `ServerFailure`: Network or server error
+  - `NotFoundFailure`: Apiary not found
+</ResponseField>
+
+---
+
+## Repository Implementation
+
+**Source:** `lib/feature/apiaries/data/repositories/apiary_repository_impl.dart`
+
+### Class Definition
+
+```dart
+class ApiaryRepositoryImpl implements ApiaryRepository {
+  final ApiaryRemoteDataSource remoteDataSource;
+  final AuthLocalDataSource localDataSource;
+
+  ApiaryRepositoryImpl({
+    required this.remoteDataSource,
+    required this.localDataSource,
+  });
+}
+```
+
+### Dependencies
+
+<ParamField path="remoteDataSource" type="ApiaryRemoteDataSource" required>
+  Handles HTTP requests to the backend API for apiary operations.
+</ParamField>
+
+<ParamField path="localDataSource" type="AuthLocalDataSource" required>
+  Provides access to locally stored authentication tokens.
+</ParamField>
+
+### Implementation Details
+
+The implementation follows a consistent pattern for all methods:
+
+1. Retrieve authentication token from local storage
+2. Validate token presence
+3. Call remote data source with token and parameters
+4. Handle exceptions and map to appropriate failure types
+5. Return `Either<Failure, T>` result
+
+#### getApiaries Implementation
+
+```dart
+@override
+Future<Either<Failure, List<Apiary>>> getApiaries() async {
+  try {
+    final token = await localDataSource.getToken();
+    if (token == null) {
+      return const Left(AuthFailure('No authentication token found.'));
+    }
+    final result = await remoteDataSource.getApiaries(token);
+    return Right(result);
+  } catch (e) {
+    return Left(ServerFailure(e.toString()));
+  }
+}
+```
+
+<Expandable title="Error Handling Flow">
+  1. Check for authentication token
+  2. If missing, return `AuthFailure`
+  3. Call remote data source
+  4. Catch any exceptions and wrap in `ServerFailure`
+  5. Return success result or failure
+</Expandable>
+
+#### createApiary Implementation
+
+```dart
+@override
+Future<Either<Failure, Apiary>> createApiary(
+  String userId,
+  String name,
+  String? location,
+  int? beehivesCount,
+  bool treatments,
+) async {
+  try {
+    final token = await localDataSource.getToken();
+    if (token == null) {
+      return const Left(AuthFailure('No authentication token found.'));
+    }
+    final result = await remoteDataSource.createApiary(
+      token,
+      userId,
+      name,
+      location,
+      beehivesCount,
+      treatments,
+    );
+    return Right(result);
+  } catch (e) {
+    return Left(ServerFailure(e.toString()));
+  }
+}
+```
+
+#### updateApiary Implementation
+
+```dart
+@override
+Future<Either<Failure, Apiary>> updateApiary(
+  String apiaryId,
+  String userId,
+  String? name,
+  String? location,
+  int? beehivesCount,
+  bool? treatments,
+) async {
+  try {
+    final token = await localDataSource.getToken();
+    if (token == null) {
+      return const Left(AuthFailure('No authentication token found.'));
+    }
+    final result = await remoteDataSource.updateApiary(
+      token,
+      apiaryId,
+      userId,
+      name,
+      location,
+      beehivesCount,
+      treatments,
+    );
+    return Right(result);
+  } catch (e) {
+    return Left(ServerFailure(e.toString()));
+  }
+}
+```
+
+#### deleteApiary Implementation
+
+```dart
+@override
+Future<Either<Failure, void>> deleteApiary(
+  String apiaryId,
+  String userId,
+) async {
+  try {
+    final token = await localDataSource.getToken();
+    if (token == null) {
+      return const Left(AuthFailure('No authentication token found.'));
+    }
+    await remoteDataSource.deleteApiary(token, apiaryId, userId);
+    return const Right(null);
+  } catch (e) {
+    return Left(ServerFailure(e.toString()));
+  }
+}
+```
+
+---
+
+## Usage Example
+
+### Setting Up the Repository
+
+```dart
+import 'package:get_it/get_it.dart';
+
+final getIt = GetIt.instance;
+
+void setupRepositories() {
+  // Register data sources
+  getIt.registerLazySingleton<ApiaryRemoteDataSource>(
+    () => ApiaryRemoteDataSourceImpl(httpClient: getIt()),
+  );
+  
+  getIt.registerLazySingleton<AuthLocalDataSource>(
+    () => AuthLocalDataSourceImpl(secureStorage: getIt()),
+  );
+  
+  // Register repository
+  getIt.registerLazySingleton<ApiaryRepository>(
+    () => ApiaryRepositoryImpl(
+      remoteDataSource: getIt(),
+      localDataSource: getIt(),
+    ),
+  );
+}
+```
+
+### Using the Repository
+
+```dart
+class ApiaryService {
+  final ApiaryRepository repository;
+  
+  ApiaryService(this.repository);
+  
+  Future<void> loadApiaries() async {
+    final result = await repository.getApiaries();
+    
+    result.fold(
+      (failure) {
+        if (failure is AuthFailure) {
+          print('Please log in');
+        } else {
+          print('Error: ${failure.message}');
+        }
+      },
+      (apiaries) {
+        print('Loaded ${apiaries.length} apiaries');
+      },
+    );
+  }
+  
+  Future<void> addApiary(String name, String location) async {
+    final result = await repository.createApiary(
+      'user_123',
+      name,
+      location,
+      null,
+      false,
+    );
+    
+    result.fold(
+      (failure) => print('Failed to create: ${failure.message}'),
+      (apiary) => print('Created: ${apiary.name}'),
+    );
+  }
+}
+```
+
+## Testing
+
+### Mocking the Repository
+
+```dart
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+
+@GenerateMocks([ApiaryRepository])
+import 'apiary_repository_test.mocks.dart';
+
+void main() {
+  late MockApiaryRepository mockRepository;
+  
+  setUp(() {
+    mockRepository = MockApiaryRepository();
+  });
+  
+  test('should return list of apiaries on success', () async {
+    // Arrange
+    final apiaries = [
+      Apiary(id: '1', userId: 'user1', name: 'Test', treatments: false),
+    ];
+    when(mockRepository.getApiaries())
+      .thenAnswer((_) async => Right(apiaries));
+    
+    // Act
+    final result = await mockRepository.getApiaries();
+    
+    // Assert
+    expect(result.isRight, true);
+    result.fold(
+      (failure) => fail('Should not fail'),
+      (data) => expect(data.length, 1),
+    );
+  });
+  
+  test('should return AuthFailure when token missing', () async {
+    // Arrange
+    when(mockRepository.getApiaries())
+      .thenAnswer((_) async => const Left(AuthFailure('No token')));
+    
+    // Act
+    final result = await mockRepository.getApiaries();
+    
+    // Assert
+    expect(result.isLeft, true);
+    result.fold(
+      (failure) => expect(failure, isA<AuthFailure>()),
+      (data) => fail('Should not succeed'),
+    );
+  });
+}
+```
+
+## Architecture Benefits
+
+<Expandable title="Separation of Concerns">
+  The repository pattern separates business logic (domain layer) from data access details (data layer), making the code more maintainable and testable.
+</Expandable>
+
+<Expandable title="Testability">
+  The abstract interface allows for easy mocking in tests, enabling unit testing of use cases without requiring actual network calls.
+</Expandable>
+
+<Expandable title="Flexibility">
+  The implementation can be swapped without affecting the domain layer. For example, you could add caching, offline support, or switch to a different backend.
+</Expandable>
+
+<Expandable title="Error Handling">
+  Centralized error handling ensures consistent failure types across the application, making it easier to handle errors at the presentation layer.
+</Expandable>
+
+## Related
+
+- [Apiary Entity](/api/apiaries/entities) - The core apiary domain entity
+- [Use Cases](/api/apiaries/usecases) - Business logic operations using this repository

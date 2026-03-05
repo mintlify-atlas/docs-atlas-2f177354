@@ -1,0 +1,626 @@
+---
+title: 'Networking'
+description: 'API integration with Dio and error handling patterns'
+icon: 'network-wired'
+---
+
+## Overview
+
+Softbee uses **Dio** as the HTTP client for all network requests. The networking layer is organized within the data layer of Clean Architecture, with centralized configuration and consistent error handling.
+
+## Dio Client Configuration
+
+The Dio client is configured as a global Riverpod provider:
+
+```dart lib/core/network/dio_client.dart
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+
+final dioClientProvider = Provider<Dio>((ref) {
+  // Platform-specific base URL configuration
+  final baseUrl = kIsWeb
+      ? 'http://127.0.0.1:5000'
+      : (defaultTargetPlatform == TargetPlatform.android
+            ? 'http://10.0.2.2:5000'  // Android emulator
+            : 'http://127.0.0.1:5000'); // iOS simulator
+
+  final BaseOptions options = BaseOptions(
+    baseUrl: baseUrl,
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+  );
+  
+  return Dio(options);
+});
+```
+
+<Note>
+The base URL is automatically configured based on the platform:
+- **Web**: `127.0.0.1:5000`
+- **Android Emulator**: `10.0.2.2:5000` (maps to host machine's localhost)
+- **iOS Simulator**: `127.0.0.1:5000`
+</Note>
+
+## Data Source Pattern
+
+Network requests are encapsulated in data sources that implement abstract interfaces:
+
+### Remote Data Source Interface
+
+```dart lib/feature/apiaries/data/datasources/apiary_remote_datasource.dart
+abstract class ApiaryRemoteDataSource {
+  Future<List<Apiary>> getApiaries(String token);
+  
+  Future<Apiary> createApiary(
+    String token,
+    String userId,
+    String name,
+    String? location,
+    int? beehivesCount,
+    bool treatments,
+  );
+  
+  Future<Apiary> updateApiary(
+    String token,
+    String apiaryId,
+    String userId,
+    String? name,
+    String? location,
+    int? beehivesCount,
+    bool? treatments,
+  );
+  
+  Future<void> deleteApiary(String token, String apiaryId, String userId);
+}
+```
+
+### Remote Data Source Implementation
+
+```dart lib/feature/apiaries/data/datasources/apiary_remote_datasource.dart
+class ApiaryRemoteDataSourceImpl implements ApiaryRemoteDataSource {
+  final Dio httpClient;
+  final AuthLocalDataSource localDataSource;
+
+  ApiaryRemoteDataSourceImpl(this.httpClient, this.localDataSource);
+
+  @override
+  Future<List<Apiary>> getApiaries(String token) async {
+    try {
+      final response = await httpClient.get(
+        '/api/v1/apiaries',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> apiariesJson = response.data;
+        return apiariesJson.map((json) => Apiary.fromJson(json)).toList();
+      } else {
+        throw Exception(
+          response.data['message'] ?? 'Error al obtener apiarios',
+        );
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+          e.response!.data['message'] ??
+              'Error de red: ${e.response!.statusCode}',
+        );
+      } else {
+        throw Exception('Error de conexión: ${e.message}');
+      }
+    } catch (e) {
+      throw Exception('Error inesperado: $e');
+    }
+  }
+
+  @override
+  Future<Apiary> createApiary(
+    String token,
+    String userId,
+    String name,
+    String? location,
+    int? beehivesCount,
+    bool treatments,
+  ) async {
+    try {
+      final response = await httpClient.post(
+        '/api/v1/apiaries',
+        data: {
+          'user_id': userId,
+          'name': name,
+          'location': location,
+          'beehives_count': beehivesCount,
+          'treatments': treatments,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 201) {
+        return Apiary.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Error al crear apiario');
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+          e.response!.data['message'] ??
+              'Error de red: ${e.response!.statusCode}',
+        );
+      } else {
+        throw Exception('Error de conexión: ${e.message}');
+      }
+    } catch (e) {
+      throw Exception('Error inesperado: $e');
+    }
+  }
+
+  @override
+  Future<Apiary> updateApiary(
+    String token,
+    String apiaryId,
+    String userId,
+    String? name,
+    String? location,
+    int? beehivesCount,
+    bool? treatments,
+  ) async {
+    try {
+      final response = await httpClient.put(
+        '/api/v1/apiaries/$apiaryId',
+        data: {
+          'user_id': userId,
+          if (name != null) 'name': name,
+          if (location != null) 'location': location,
+          if (beehivesCount != null) 'beehives_count': beehivesCount,
+          if (treatments != null) 'treatments': treatments,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        return Apiary.fromJson(response.data);
+      } else {
+        throw Exception(
+          response.data['message'] ?? 'Error al actualizar apiario',
+        );
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+          e.response!.data['message'] ??
+              'Error de red: ${e.response!.statusCode}',
+        );
+      } else {
+        throw Exception('Error de conexión: ${e.message}');
+      }
+    } catch (e) {
+      throw Exception('Error inesperado: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteApiary(
+    String token,
+    String apiaryId,
+    String userId,
+  ) async {
+    try {
+      final response = await httpClient.delete(
+        '/api/v1/apiaries/$apiaryId',
+        data: {'user_id': userId},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode != 204) {
+        throw Exception(
+          response.data['message'] ?? 'Error al eliminar apiario',
+        );
+      }
+    } on DioException catch (e) {
+      if (e.response != null) {
+        throw Exception(
+          e.response!.data['message'] ??
+              'Error de red: ${e.response!.statusCode}',
+        );
+      } else {
+        throw Exception('Error de conexión: ${e.message}');
+      }
+    } catch (e) {
+      throw Exception('Error inesperado: $e');
+    }
+  }
+}
+```
+
+## Error Handling
+
+### DioException Handling
+
+Softbee uses a three-tier error handling approach:
+
+1. **DioException Catch**: Handle network-specific errors
+2. **Response Status Check**: Validate HTTP status codes
+3. **Generic Exception Catch**: Catch unexpected errors
+
+```dart
+try {
+  final response = await httpClient.get('/api/v1/resource');
+  
+  if (response.statusCode == 200) {
+    return parseResponse(response.data);
+  } else {
+    throw Exception(response.data['message'] ?? 'Error occurred');
+  }
+} on DioException catch (e) {
+  if (e.response != null) {
+    // Server responded with error
+    throw Exception(
+      e.response!.data['message'] ?? 
+      'Error de red: ${e.response!.statusCode}',
+    );
+  } else {
+    // Connection error
+    throw Exception('Error de conexión: ${e.message}');
+  }
+} catch (e) {
+  // Unexpected error
+  throw Exception('Error inesperado: $e');
+}
+```
+
+### Domain Failures
+
+Data source exceptions are converted to domain failures in the repository layer:
+
+```dart lib/core/error/failures.dart
+abstract class Failure {
+  final String message;
+  const Failure(this.message);
+}
+
+class ServerFailure extends Failure {
+  const ServerFailure(super.message);
+}
+
+class NetworkFailure extends Failure {
+  const NetworkFailure(super.message);
+}
+
+class AuthFailure extends Failure {
+  const AuthFailure(super.message);
+}
+
+class InvalidInputFailure extends Failure {
+  const InvalidInputFailure(super.message);
+}
+```
+
+### Repository Error Mapping
+
+```dart
+@override
+Future<Either<Failure, List<Apiary>>> getApiaries(String token) async {
+  try {
+    final apiaries = await remoteDataSource.getApiaries(token);
+    return Right(apiaries);
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 401) {
+      return Left(AuthFailure('Token expired or invalid'));
+    } else if (e.response?.statusCode == 500) {
+      return Left(ServerFailure('Server error occurred'));
+    } else {
+      return Left(NetworkFailure('Network error: ${e.message}'));
+    }
+  } catch (e) {
+    return Left(ServerFailure('Unexpected error: $e'));
+  }
+}
+```
+
+## Authentication Headers
+
+### Token Management
+
+Tokens are retrieved from local storage and added to request headers:
+
+```dart
+final token = await localDataSource.getToken();
+
+final response = await httpClient.get(
+  '/api/v1/resource',
+  options: Options(
+    headers: {'Authorization': 'Bearer $token'},
+  ),
+);
+```
+
+### Automatic Token Injection
+
+You can create an interceptor for automatic token injection:
+
+```dart
+class AuthInterceptor extends Interceptor {
+  final AuthLocalDataSource localDataSource;
+
+  AuthInterceptor(this.localDataSource);
+
+  @override
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    final token = await localDataSource.getToken();
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+    handler.next(options);
+  }
+}
+
+// Add to Dio
+final dio = Dio(options);
+dio.interceptors.add(AuthInterceptor(localDataSource));
+```
+
+## Request Types
+
+### GET Requests
+
+```dart
+Future<List<Apiary>> getApiaries(String token) async {
+  final response = await httpClient.get(
+    '/api/v1/apiaries',
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+  
+  final List<dynamic> json = response.data;
+  return json.map((item) => Apiary.fromJson(item)).toList();
+}
+```
+
+### POST Requests
+
+```dart
+Future<Apiary> createApiary(Map<String, dynamic> data, String token) async {
+  final response = await httpClient.post(
+    '/api/v1/apiaries',
+    data: data,
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+  
+  return Apiary.fromJson(response.data);
+}
+```
+
+### PUT Requests
+
+```dart
+Future<Apiary> updateApiary(
+  String id,
+  Map<String, dynamic> data,
+  String token,
+) async {
+  final response = await httpClient.put(
+    '/api/v1/apiaries/$id',
+    data: data,
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+  
+  return Apiary.fromJson(response.data);
+}
+```
+
+### DELETE Requests
+
+```dart
+Future<void> deleteApiary(String id, String token) async {
+  await httpClient.delete(
+    '/api/v1/apiaries/$id',
+    data: {'user_id': userId},
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+}
+```
+
+## Response Parsing
+
+### JSON to Entity Conversion
+
+Entities implement `fromJson` factory constructors:
+
+```dart
+class Apiary {
+  final String id;
+  final String userId;
+  final String name;
+  final String? location;
+
+  Apiary({
+    required this.id,
+    required this.userId,
+    required this.name,
+    this.location,
+  });
+
+  factory Apiary.fromJson(Map<String, dynamic> json) {
+    return Apiary(
+      id: json['id'].toString(),
+      userId: json['user_id'],
+      name: json['name'],
+      location: json['location'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'name': name,
+      'location': location,
+    };
+  }
+}
+```
+
+## API Endpoint Structure
+
+Softbee follows RESTful API conventions:
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `GET` | `/api/v1/apiaries` | List all apiaries |
+| `POST` | `/api/v1/apiaries` | Create new apiary |
+| `PUT` | `/api/v1/apiaries/:id` | Update apiary |
+| `DELETE` | `/api/v1/apiaries/:id` | Delete apiary |
+| `POST` | `/api/v1/auth/login` | User login |
+| `POST` | `/api/v1/auth/register` | User registration |
+| `POST` | `/api/v1/auth/logout` | User logout |
+
+## Timeout Configuration
+
+Timeouts are configured globally in the Dio client:
+
+```dart
+final BaseOptions options = BaseOptions(
+  baseUrl: baseUrl,
+  connectTimeout: const Duration(seconds: 10),  // Connection timeout
+  receiveTimeout: const Duration(seconds: 10),  // Response timeout
+);
+```
+
+<Warning>
+Adjust timeout values based on your API's typical response times and network conditions.
+</Warning>
+
+## Query Parameters
+
+```dart
+final response = await httpClient.get(
+  '/api/v1/apiaries',
+  queryParameters: {
+    'userId': userId,
+    'limit': 20,
+    'offset': 0,
+  },
+  options: Options(headers: {'Authorization': 'Bearer $token'}),
+);
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Handle DioException">
+    Catch `DioException` specifically to handle network errors gracefully:
+    ```dart
+    try {
+      final response = await httpClient.get('/api/v1/resource');
+    } on DioException catch (e) {
+      // Handle network error
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use Type-Safe Responses">
+    Always parse responses into domain entities:
+    ```dart
+    // Good
+    return Apiary.fromJson(response.data);
+    
+    // Avoid
+    return response.data; // Dynamic type
+    ```
+  </Accordion>
+
+  <Accordion title="Centralize Base URL Configuration">
+    Never hardcode API URLs in data sources - use the centralized Dio provider.
+  </Accordion>
+
+  <Accordion title="Validate Status Codes">
+    Always check response status codes explicitly:
+    ```dart
+    if (response.statusCode == 200) {
+      // Success
+    } else {
+      // Handle error
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use Proper HTTP Methods">
+    Follow RESTful conventions:
+    - `GET`: Retrieve resources
+    - `POST`: Create resources
+    - `PUT`: Update resources
+    - `DELETE`: Remove resources
+  </Accordion>
+</AccordionGroup>
+
+## Logging and Debugging
+
+Add logging interceptor for development:
+
+```dart
+final dio = Dio(options);
+
+if (kDebugMode) {
+  dio.interceptors.add(LogInterceptor(
+    requestBody: true,
+    responseBody: true,
+    requestHeader: true,
+    responseHeader: false,
+  ));
+}
+```
+
+## Testing Network Layer
+
+```dart
+void main() {
+  group('ApiaryRemoteDataSource', () {
+    late MockDio mockDio;
+    late ApiaryRemoteDataSourceImpl dataSource;
+
+    setUp(() {
+      mockDio = MockDio();
+      dataSource = ApiaryRemoteDataSourceImpl(mockDio, mockLocalDataSource);
+    });
+
+    test('getApiaries returns list of apiaries on success', () async {
+      // Arrange
+      final responseData = [
+        {'id': '1', 'user_id': 'user1', 'name': 'Apiary 1'},
+      ];
+      
+      when(() => mockDio.get(any(), options: any(named: 'options')))
+          .thenAnswer((_) async => Response(
+            data: responseData,
+            statusCode: 200,
+            requestOptions: RequestOptions(path: ''),
+          ));
+
+      // Act
+      final result = await dataSource.getApiaries('token');
+
+      // Assert
+      expect(result.length, 1);
+      expect(result[0].name, 'Apiary 1');
+    });
+  });
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" icon="arrows-rotate" href="/development/state-management">
+    Learn how network data flows through state
+  </Card>
+  <Card title="Testing" icon="vial" href="/development/testing">
+    Test network requests and error handling
+  </Card>
+</CardGroup>

@@ -1,0 +1,185 @@
+---
+title: 'Monitoring Entities'
+description: 'Domain entities for the monitoring and inspection question system'
+icon: 'database'
+---
+
+The monitoring feature uses domain entities to represent inspection questions and their configurations. These entities are part of the domain layer in Clean Architecture.
+
+## Pregunta
+
+The `Pregunta` entity represents an inspection question that can be used during hive monitoring. Questions can be of different types (text, numeric, multiple choice, etc.) and can be customized per apiary.
+
+### Properties
+
+<ResponseField name="id" type="String" required>
+  Unique identifier for the question
+</ResponseField>
+
+<ResponseField name="apiarioId" type="String" required>
+  The ID of the apiary this question belongs to
+</ResponseField>
+
+<ResponseField name="texto" type="String" required>
+  The question text displayed to the user during inspection
+</ResponseField>
+
+<ResponseField name="tipoRespuesta" type="String" required>
+  The type of answer expected. Valid values:
+  - `texto` - Free text response
+  - `numero` - Numeric response
+  - `seleccion` - Multiple choice (single selection)
+  - `multiple` - Multiple choice (multiple selections)
+  - `rango` - Range/slider response
+</ResponseField>
+
+<ResponseField name="categoria" type="String">
+  Optional category to group related questions together (e.g., "Salud", "Población", "Producción")
+</ResponseField>
+
+<ResponseField name="obligatoria" type="bool" required>
+  Whether this question must be answered during inspection
+</ResponseField>
+
+<ResponseField name="opciones" type="List<String>">
+  List of available options for `seleccion` or `multiple` question types
+</ResponseField>
+
+<ResponseField name="min" type="int">
+  Minimum value for `numero` or `rango` question types
+</ResponseField>
+
+<ResponseField name="max" type="int">
+  Maximum value for `numero` or `rango` question types
+</ResponseField>
+
+<ResponseField name="orden" type="int" required>
+  Display order for the question (lower numbers appear first)
+</ResponseField>
+
+<ResponseField name="activa" type="bool" default="true">
+  Whether this question is currently active and should be displayed
+</ResponseField>
+
+### Usage Example
+
+```dart
+import 'package:softbee/feature/monitoring/domain/entities/question_model.dart';
+
+// Create a new text question
+final textQuestion = Pregunta(
+  id: '1',
+  apiarioId: 'apiary123',
+  texto: '¿Cómo se ve la población de abejas?',
+  tipoRespuesta: 'texto',
+  categoria: 'Población',
+  obligatoria: true,
+  orden: 1,
+  activa: true,
+);
+
+// Create a multiple choice question
+final choiceQuestion = Pregunta(
+  id: '2',
+  apiarioId: 'apiary123',
+  texto: '¿Se observa la reina?',
+  tipoRespuesta: 'seleccion',
+  categoria: 'Salud',
+  obligatoria: true,
+  opciones: ['Sí', 'No', 'No seguro'],
+  orden: 2,
+  activa: true,
+);
+
+// Create a numeric range question
+final rangeQuestion = Pregunta(
+  id: '3',
+  apiarioId: 'apiary123',
+  texto: '¿Cuántos cuadros con cría?',
+  tipoRespuesta: 'rango',
+  categoria: 'Población',
+  obligatoria: false,
+  min: 0,
+  max: 10,
+  orden: 3,
+  activa: true,
+);
+```
+
+### Methods
+
+<ResponseField name="fromJson" type="factory">
+  Creates a `Pregunta` instance from a JSON map. Handles both API response formats (snake_case) and local formats.
+
+  ```dart
+  final question = Pregunta.fromJson({
+    'id': '1',
+    'apiary_id': 'apiary123',
+    'question_text': '¿Estado de salud?',
+    'question_type': 'seleccion',
+    'category': 'Salud',
+    'is_required': true,
+    'options': ['Bueno', 'Regular', 'Malo'],
+    'display_order': 1,
+    'is_active': true,
+  });
+  ```
+</ResponseField>
+
+<ResponseField name="toJson" type="Map<String, dynamic>">
+  Converts the question to a JSON map for API requests. Uses snake_case field names.
+
+  ```dart
+  final json = question.toJson();
+  // Returns:
+  // {
+  //   'id': '1',
+  //   'apiary_id': 'apiary123',
+  //   'question_text': '¿Estado de salud?',
+  //   'question_type': 'seleccion',
+  //   'category': 'Salud',
+  //   'is_required': true,
+  //   'options': ['Bueno', 'Regular', 'Malo'],
+  //   'display_order': 1,
+  //   'is_active': true,
+  // }
+  ```
+</ResponseField>
+
+<ResponseField name="copyWith" type="Pregunta">
+  Creates a copy of the question with optionally modified fields. Useful for updates.
+
+  ```dart
+  final updatedQuestion = question.copyWith(
+    texto: 'Nueva pregunta actualizada',
+    obligatoria: false,
+  );
+  ```
+</ResponseField>
+
+### Equality
+
+The `Pregunta` entity extends `Equatable`, which means two instances are considered equal if all their properties are equal. This is useful for state management and testing.
+
+```dart
+final question1 = Pregunta(id: '1', /* ... */);
+final question2 = Pregunta(id: '1', /* ... */);
+
+if (question1 == question2) {
+  print('Questions are identical');
+}
+```
+
+## Best Practices
+
+<Tip>
+  **Validation**: Always validate `tipoRespuesta` matches the provided configuration (e.g., `opciones` for selection types, `min`/`max` for numeric types).
+</Tip>
+
+<Warning>
+  **Empty IDs**: Template questions may have empty IDs until they are created in the database. Always check if `id.isNotEmpty` before performing update/delete operations.
+</Warning>
+
+<Info>
+  **Display Order**: When creating multiple questions, use consistent ordering (e.g., increments of 10: 10, 20, 30) to allow easy reordering without conflicts.
+</Info>

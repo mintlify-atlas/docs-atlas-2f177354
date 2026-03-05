@@ -1,0 +1,284 @@
+---
+title: 'Apiaries Management'
+description: 'Create, view, update, and organize your beekeeping apiaries'
+icon: 'location-dot'
+---
+
+## Overview
+
+The Apiaries feature is the central hub for organizing your beekeeping operations. Each apiary represents a physical location where you keep your beehives. Softbee allows you to manage multiple apiaries, track their locations, configure treatment preferences, and view hive counts.
+
+## What is an Apiary?
+
+An apiary (or bee yard) is a location where beehives are kept. In Softbee, each apiary serves as a container for:
+
+- Multiple beehives
+- Inventory items specific to that location
+- Monitoring data and inspections
+- Location-based questions and reports
+
+## Apiary Entity
+
+Each apiary in Softbee contains the following information:
+
+```dart
+class Apiary {
+  final String id;              // Unique identifier
+  final String userId;          // Owner of the apiary
+  final String name;            // Display name (e.g., "Apiario Las Flores")
+  final String? location;       // Physical address or coordinates
+  final int? beehivesCount;     // Number of hives at this location
+  final bool treatments;        // Whether treatments are applied
+  final DateTime? createdAt;    // Creation timestamp
+}
+```
+
+**Source:** `lib/feature/apiaries/domain/entities/apiary.dart`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Create Apiaries" icon="plus">
+    Add new apiary locations with name, address, and treatment preferences
+  </Card>
+  <Card title="View All Apiaries" icon="list">
+    Browse all your apiaries in a card-based interface
+  </Card>
+  <Card title="Update Details" icon="pen-to-square">
+    Modify apiary information including location and settings
+  </Card>
+  <Card title="Delete Apiaries" icon="trash">
+    Remove apiaries you no longer manage
+  </Card>
+</CardGroup>
+
+## Creating an Apiary
+
+Users can create apiaries during registration or later from the dashboard.
+
+<Steps>
+  <Step title="Open Apiary Form">
+    Click the "Add Apiary" button or use the apiary creation dialog.
+  </Step>
+  
+  <Step title="Enter Apiary Details">
+    Provide the following information:
+    
+    - **Name**: A descriptive name for the apiary (minimum 3 characters)
+    - **Location**: Full address or description of the site
+    - **Treatments**: Toggle whether you apply medical treatments to sick bees
+    
+    <Note>
+      The location field should be as specific as possible, including municipality, vereda (rural subdivision), and property name.
+    </Note>
+  </Step>
+  
+  <Step title="Save Apiary">
+    Click "Save" to create the apiary. It will appear in your apiaries list immediately.
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/apiaries/presentation/widgets/apiary_form_dialog.dart`
+
+## Viewing Apiaries
+
+The apiaries dashboard displays all your bee yards in an organized card layout.
+
+### Apiary Card Display
+
+Each apiary card shows:
+
+- **Apiary Name**: Primary identifier
+- **Location**: Address or site description
+- **Beehive Count**: Number of hives at this location
+- **Treatment Status**: Whether treatments are used
+- **Created Date**: When the apiary was added
+
+### Navigation Options
+
+From each apiary card, you can access:
+
+- **Hives Page**: View and manage all beehives at this apiary
+- **Inventory Page**: Track supplies and equipment for this location
+- **Reports Page**: Generate reports for this apiary
+- **History Page**: View activity and changes over time
+- **Settings**: Update apiary details or delete
+
+**Implementation:** `lib/feature/apiaries/presentation/widgets/apiary_card.dart`
+
+## Updating an Apiary
+
+Modify apiary information at any time.
+
+<Steps>
+  <Step title="Open Settings">
+    Navigate to the apiary settings page or click the edit icon on the apiary card.
+  </Step>
+  
+  <Step title="Modify Fields">
+    Update any of the following:
+    - Name
+    - Location
+    - Treatment preferences
+  </Step>
+  
+  <Step title="Save Changes">
+    Changes are immediately synchronized with the backend and reflected across the app.
+  </Step>
+</Steps>
+
+<Tip>
+  The beehive count is automatically calculated based on the number of hives associated with the apiary and cannot be edited manually.
+</Tip>
+
+**Implementation:** `lib/feature/apiaries/presentation/pages/apiary_settings_page.dart`
+
+## Deleting an Apiary
+
+<Warning>
+  Deleting an apiary will also delete all associated beehives, inventory items, and monitoring data. This action cannot be undone.
+</Warning>
+
+<Steps>
+  <Step title="Confirm Deletion">
+    Click the delete button and confirm the action in the warning dialog.
+  </Step>
+  
+  <Step title="Data Removal">
+    The apiary and all related data are permanently removed from the system.
+  </Step>
+</Steps>
+
+## Use Cases
+
+The apiaries feature implements the following operations:
+
+| Use Case | Purpose | Location |
+|----------|---------|----------|
+| `CreateApiaryUseCase` | Add a new apiary to the system | `lib/feature/apiaries/domain/usecases/create_apiary_usecase.dart` |
+| `GetApiariesUseCase` | Retrieve all apiaries for a user | `lib/feature/apiaries/domain/usecases/get_apiaries.dart` |
+| `UpdateApiaryUseCase` | Modify apiary information | `lib/feature/apiaries/domain/usecases/update_apiary_usecase.dart` |
+| `DeleteApiaryUseCase` | Remove an apiary and related data | `lib/feature/apiaries/domain/usecases/delete_apiary_usecase.dart` |
+
+## Apiary Dashboard Navigation
+
+Once you select an apiary, you can navigate to specialized pages:
+
+### Available Pages
+
+1. **Hives Page** (`/apiaries/:id/hives`)
+   - View all beehives at this location
+   - Add new hives
+   - Update hive status
+
+2. **Inventory Page** (`/apiaries/:id/inventory`)
+   - Manage equipment and supplies
+   - Track stock levels
+   - Monitor low inventory alerts
+
+3. **Reports Page** (`/apiaries/:id/reports`)
+   - Generate production reports
+   - View historical data
+   - Export data for analysis
+
+4. **History Page** (`/apiaries/:id/history`)
+   - Timeline of all activities
+   - Changes to hives and settings
+   - Inspection records
+
+5. **Settings Page** (`/apiaries/:id/settings`)
+   - Update apiary details
+   - Manage permissions
+   - Delete apiary
+
+**Implementation:** `lib/feature/apiaries/presentation/pages/`
+
+## State Management
+
+Apiary state is managed with Riverpod providers:
+
+```dart
+final apiariesControllerProvider = StateNotifierProvider<ApiariesController, ApiariesState>(...)
+```
+
+The controller handles:
+- Loading apiaries from the backend
+- Creating and updating apiaries
+- Managing UI state (loading, errors)
+- Caching apiary data
+
+**Source:** `lib/feature/apiaries/presentation/controllers/apiaries_controller.dart`
+
+## Data Flow
+
+Softbee follows Clean Architecture patterns:
+
+```
+Presentation Layer (UI)
+       ↓
+Controllers (Riverpod)
+       ↓
+Use Cases (Business Logic)
+       ↓
+Repository Interface
+       ↓
+Repository Implementation
+       ↓
+Remote Data Source (API)
+```
+
+**Repository:** `lib/feature/apiaries/data/repositories/apiary_repository_impl.dart`
+
+**Data Source:** `lib/feature/apiaries/data/datasources/apiary_remote_datasource.dart`
+
+## UI Components
+
+### Apiary Menu
+
+The apiary menu widget provides quick access to all apiary-related pages.
+
+**Source:** `lib/feature/apiaries/presentation/widgets/apiaries_menu.dart`
+
+### Apiary Form Dialog
+
+A reusable form component for creating and editing apiaries with validation.
+
+**Features:**
+- Real-time validation
+- Error message display
+- Responsive layout
+- Loading states
+
+**Source:** `lib/feature/apiaries/presentation/widgets/apiary_form_dialog.dart`
+
+## Treatment Tracking
+
+The `treatments` boolean flag indicates whether the beekeeper applies medical or chemical treatments when bees are sick. This information is useful for:
+
+- Organic certification tracking
+- Treatment scheduling
+- Regulatory compliance
+- Production quality control
+
+<Info>
+  Organic beekeeping typically avoids synthetic treatments, so this flag helps distinguish between conventional and organic operations.
+</Info>
+
+## Integration with Other Features
+
+Apiaries are the foundation for other Softbee features:
+
+- **[Beehives](/features/beehives)**: Each hive belongs to exactly one apiary
+- **[Inventory](/features/inventory)**: Supplies are tracked per apiary
+- **[Monitoring](/features/monitoring)**: Inspections and questions are scoped to apiaries
+
+## Best Practices
+
+<Tip>
+  Use descriptive names that help you quickly identify the location, especially if you manage multiple apiaries. Examples: "Finca El Rosal - Norte", "Apiario Montaña 2024".
+</Tip>
+
+- Keep location information up to date for accurate records
+- Review treatment settings regularly for compliance
+- Delete unused apiaries to keep your dashboard clean
+- Use the history page to track changes over time

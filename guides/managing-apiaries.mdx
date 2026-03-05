@@ -1,0 +1,217 @@
+---
+title: 'Managing Apiaries'
+description: 'Create, edit, and organize your apiary locations'
+icon: 'location-dot'
+---
+
+## Overview
+
+Apiaries are the physical locations where you keep your beehives. Softbee allows you to manage multiple apiaries, each with its own beehives, inventory, and monitoring data.
+
+## Creating a New Apiary
+
+<Steps>
+  <Step title="Open the Apiary Creation Dialog">
+    From the main dashboard, tap the **"Add New Apiary"** button or the `+` icon.
+    
+    You'll see a dialog titled **"Crear Nuevo Apiary"** (Create New Apiary).
+  </Step>
+
+  <Step title="Enter Apiary Name">
+    **Field**: `name` (Required)
+    
+    Provide a descriptive name for your apiary:
+    - Minimum 3 characters
+    - Example: "Apiario El Prado", "Valley Bee Farm"
+    
+    <Note>
+      Choose a name that helps you easily identify the location, especially if you manage multiple apiaries.
+    </Note>
+  </Step>
+
+  <Step title="Add Location Information">
+    **Field**: `location` (Optional)
+    
+    Enter the physical address or description of your apiary location:
+    - Example: "Vereda La Esperanza, Cota"
+    - Example: "Mountain Road, Plot 15, Rural Area"
+    
+    The app will validate the location and show a green checkmark if the text is not empty.
+    
+    <Tip>
+      Even though location is optional, adding it helps you keep track of multiple sites and can be useful for weather tracking and planning visits.
+    </Tip>
+  </Step>
+
+  <Step title="Configure Treatment Settings">
+    **Field**: `treatments` (Boolean)
+    
+    Toggle the **"Aplicar Tratamientos"** (Apply Treatments) switch:
+    - **ON**: You apply treatments when bees are sick
+    - **OFF**: You don't apply treatments
+    
+    This setting helps you track your apiary management approach.
+  </Step>
+
+  <Step title="Save Your Apiary">
+    Click the **"Crear Apiario"** (Create Apiary) button to save.
+    
+    The system will:
+    - Validate all required fields
+    - Create the apiary in the database
+    - Initialize the beehive count to 0
+    - Return you to the dashboard
+  </Step>
+</Steps>
+
+## Editing an Existing Apiary
+
+<Steps>
+  <Step title="Locate the Apiary">
+    Find the apiary you want to edit in your dashboard or apiary list.
+  </Step>
+
+  <Step title="Open the Edit Dialog">
+    Tap the **edit icon** (pencil icon) on the apiary card.
+    
+    The dialog will be pre-filled with the current apiary information:
+    - Apiary name
+    - Location
+    - Treatment settings
+  </Step>
+
+  <Step title="Modify the Information">
+    Update any of the fields:
+    - Change the name
+    - Update the location
+    - Toggle the treatment setting
+    
+    <Warning>
+      The beehive count (`beehives_count`) is preserved automatically and cannot be manually edited. It's updated automatically when you add or remove beehives.
+    </Warning>
+  </Step>
+
+  <Step title="Save Changes">
+    Click **"Guardar Cambios"** (Save Changes) to update the apiary.
+    
+    If there are any errors, they will be displayed in the dialog.
+  </Step>
+</Steps>
+
+## Apiary Data Structure
+
+Each apiary stores the following information:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|---------|
+| `id` | String | Unique identifier for the apiary | Auto-generated |
+| `user_id` | String | ID of the user who owns the apiary | Auto-set |
+| `name` | String | Name of the apiary | Yes |
+| `location` | String | Physical location or address | No |
+| `beehives_count` | Integer | Number of beehives in this apiary | Auto-updated |
+| `treatments` | Boolean | Whether treatments are applied | Yes |
+| `created_at` | DateTime | When the apiary was created | Auto-set |
+
+## Managing Multiple Apiaries
+
+### Best Practices
+
+<Accordion title="Use Descriptive Names">
+  Include location information in the apiary name for quick identification:
+  - "North Field Apiary"
+  - "Riverside Bee Farm"
+  - "Urban Rooftop Hives"
+</Accordion>
+
+<Accordion title="Keep Location Information Updated">
+  Accurate location data helps with:
+  - Planning inspection routes
+  - Weather-based insights
+  - Regulatory compliance
+  - Emergency response
+</Accordion>
+
+<Accordion title="Track Treatment Approach">
+  Use the `treatments` setting to differentiate between:
+  - Organic/treatment-free apiaries
+  - Conventional management apiaries
+  - This helps when managing certifications or different customer requirements
+</Accordion>
+
+## Viewing Apiary Details
+
+Each apiary card displays:
+
+- **Apiary Name**: The name you assigned
+- **Location**: The physical location (if provided)
+- **Beehive Count**: Number of beehives currently at this location
+- **Creation Date**: When the apiary was added to the system
+
+## Navigation from Apiaries
+
+From an apiary, you can access:
+
+1. **Apiary Dashboard**: Overview of all beehives and statistics
+2. **Monitoring**: 
+   - Beehive management (`/beehive`)
+   - Custom questions (`/questions`)
+   - Voice assistant (Maya)
+3. **Inventory**: Manage supplies specific to this apiary
+4. **Settings**: Edit apiary details
+
+## Common Workflows
+
+### Workflow 1: Setting Up a New Location
+
+<Steps>
+  <Step title="Create the apiary with location details" />
+  <Step title="Add existing beehives to the apiary" />
+  <Step title="Set up inventory items for this location" />
+  <Step title="Configure custom inspection questions" />
+</Steps>
+
+### Workflow 2: Seasonal Management
+
+<Steps>
+  <Step title="Review all apiaries before the season" />
+  <Step title="Update location information if hives were moved" />
+  <Step title="Verify beehive counts are accurate" />
+  <Step title="Check inventory levels for the upcoming season" />
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="Error: 'Por favor, introduce el nombre del apiario'">
+  This error appears when:
+  - The name field is empty
+  - The name has fewer than 3 characters
+  
+  **Solution**: Enter a name with at least 3 characters.
+</Accordion>
+
+<Accordion title="Location validation shows a warning">
+  The app validates location entries. If you see a warning:
+  - The location couldn't be verified
+  - But it will still be saved
+  - Ensure the location string is descriptive and accurate
+</Accordion>
+
+<Accordion title="Changes aren't saving">
+  If the "Guardar Cambios" button doesn't work:
+  1. Check for validation error messages in red text
+  2. Ensure you have an internet connection
+  3. Try closing and reopening the dialog
+  4. Contact support if the issue persists
+</Accordion>
+
+## Next Steps
+
+Once your apiaries are set up:
+
+- [Add beehives](/guides/managing-beehives) to track individual colonies
+- [Set up inventory tracking](/guides/inventory-tracking) for each location
+- [Configure inspections](/guides/inspections) to monitor hive health
+
+<Tip>
+  The beehive count updates automatically as you add or remove beehives, so you don't need to manually track this number.
+</Tip>

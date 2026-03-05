@@ -1,0 +1,386 @@
+---
+title: 'Beehive Use Cases'
+description: 'Domain use cases for beehive management operations'
+---
+
+## Overview
+
+The Beehive feature implements Clean Architecture use cases for all beehive-related operations. Each use case encapsulates a single business operation and follows the `UseCase` interface pattern, returning `Either<Failure, Result>` for functional error handling.
+
+## CreateBeehiveUseCase
+
+Creates a new beehive within a specified apiary.
+
+### Class Definition
+
+```dart
+class CreateBeehiveUseCase implements UseCase<Beehive, CreateBeehiveParams>
+```
+
+### Parameters
+
+<ParamField path="params" type="CreateBeehiveParams" required>
+  Parameters object containing beehive creation data
+</ParamField>
+
+#### CreateBeehiveParams
+
+<ParamField path="apiaryId" type="String" required>
+  ID of the apiary where the beehive will be created
+</ParamField>
+
+<ParamField path="beehiveNumber" type="int" required>
+  Sequential number for the new beehive
+</ParamField>
+
+<ParamField path="activityLevel" type="String?">
+  Initial activity level: "Alta", "Media", or "Baja"
+</ParamField>
+
+<ParamField path="beePopulation" type="String?">
+  Initial population classification: "Alta", "Media", or "Baja"
+</ParamField>
+
+<ParamField path="foodFrames" type="int?">
+  Number of food frames
+</ParamField>
+
+<ParamField path="broodFrames" type="int?">
+  Number of brood frames
+</ParamField>
+
+<ParamField path="hiveStatus" type="String?">
+  Initial hive configuration status
+</ParamField>
+
+<ParamField path="healthStatus" type="String?">
+  Initial health status
+</ParamField>
+
+<ParamField path="hasProductionChamber" type="String?">
+  Whether the hive has a production chamber: "Si" or "No"
+</ParamField>
+
+<ParamField path="observations" type="String?">
+  Additional notes or observations
+</ParamField>
+
+### Return Type
+
+<ResponseField name="Either<Failure, Beehive>" type="Either">
+  Returns either a `Failure` on error or the newly created `Beehive` entity on success
+</ResponseField>
+
+### Example Usage
+
+```dart
+import 'package:Softbee/feature/beehive/domain/usecases/create_beehive_usecase.dart';
+import 'package:Softbee/feature/beehive/domain/repositories/beehive_repository.dart';
+
+// Inject repository (typically done via dependency injection)
+final createBeehiveUseCase = CreateBeehiveUseCase(beehiveRepository);
+
+// Create parameters
+final params = CreateBeehiveParams(
+  apiaryId: 'apiary_123',
+  beehiveNumber: 15,
+  activityLevel: 'Alta',
+  beePopulation: 'Media',
+  foodFrames: 3,
+  broodFrames: 7,
+  hiveStatus: 'Cámara de cría y producción',
+  healthStatus: 'Ninguno',
+  hasProductionChamber: 'Si',
+  observations: 'New colony from split',
+);
+
+// Execute use case
+final result = await createBeehiveUseCase(params);
+
+result.fold(
+  (failure) => print('Error creating beehive: ${failure.message}'),
+  (beehive) => print('Created beehive: ${beehive.id}'),
+);
+```
+
+---
+
+## GetBeehivesByApiaryUseCase
+
+Retrieves all beehives belonging to a specific apiary.
+
+### Class Definition
+
+```dart
+class GetBeehivesByApiaryUseCase implements UseCase<List<Beehive>, String>
+```
+
+### Parameters
+
+<ParamField path="params" type="String" required>
+  The apiary ID to retrieve beehives for
+</ParamField>
+
+### Return Type
+
+<ResponseField name="Either<Failure, List<Beehive>>" type="Either">
+  Returns either a `Failure` on error or a list of `Beehive` entities on success
+</ResponseField>
+
+### Example Usage
+
+```dart
+import 'package:Softbee/feature/beehive/domain/usecases/get_beehives_by_apiary_usecase.dart';
+
+// Inject repository
+final getBeehivesUseCase = GetBeehivesByApiaryUseCase(beehiveRepository);
+
+// Execute use case with apiary ID
+final result = await getBeehivesUseCase('apiary_123');
+
+result.fold(
+  (failure) => print('Error fetching beehives: ${failure.message}'),
+  (beehives) {
+    print('Found ${beehives.length} beehives');
+    for (final beehive in beehives) {
+      print('Beehive #${beehive.beehiveNumber}: ${beehive.healthStatus}');
+    }
+  },
+);
+```
+
+---
+
+## UpdateBeehiveUseCase
+
+Updates an existing beehive's information.
+
+### Class Definition
+
+```dart
+class UpdateBeehiveUseCase implements UseCase<Beehive, UpdateBeehiveParams>
+```
+
+### Parameters
+
+<ParamField path="params" type="UpdateBeehiveParams" required>
+  Parameters object containing update data
+</ParamField>
+
+#### UpdateBeehiveParams
+
+<ParamField path="beehiveId" type="String" required>
+  ID of the beehive to update
+</ParamField>
+
+<ParamField path="apiaryId" type="String" required>
+  ID of the parent apiary (for authorization context)
+</ParamField>
+
+<ParamField path="beehiveNumber" type="int?">
+  Updated beehive number
+</ParamField>
+
+<ParamField path="activityLevel" type="String?">
+  Updated activity level
+</ParamField>
+
+<ParamField path="beePopulation" type="String?">
+  Updated population classification
+</ParamField>
+
+<ParamField path="foodFrames" type="int?">
+  Updated number of food frames
+</ParamField>
+
+<ParamField path="broodFrames" type="int?">
+  Updated number of brood frames
+</ParamField>
+
+<ParamField path="hiveStatus" type="String?">
+  Updated hive status
+</ParamField>
+
+<ParamField path="healthStatus" type="String?">
+  Updated health status
+</ParamField>
+
+<ParamField path="hasProductionChamber" type="String?">
+  Updated production chamber status
+</ParamField>
+
+<ParamField path="observations" type="String?">
+  Updated observations
+</ParamField>
+
+### Return Type
+
+<ResponseField name="Either<Failure, Beehive>" type="Either">
+  Returns either a `Failure` on error or the updated `Beehive` entity on success
+</ResponseField>
+
+### Example Usage
+
+```dart
+import 'package:Softbee/feature/beehive/domain/usecases/update_beehive_usecase.dart';
+
+// Inject repository
+final updateBeehiveUseCase = UpdateBeehiveUseCase(beehiveRepository);
+
+// Create update parameters
+final params = UpdateBeehiveParams(
+  beehiveId: 'beehive_789',
+  apiaryId: 'apiary_123',
+  activityLevel: 'Media',  // Changed from 'Alta'
+  foodFrames: 5,           // Added more food frames
+  healthStatus: 'Presencia barroa',  // Detected health issue
+  observations: 'Varroa treatment started on 2024-03-05',
+);
+
+// Execute use case
+final result = await updateBeehiveUseCase(params);
+
+result.fold(
+  (failure) => print('Error updating beehive: ${failure.message}'),
+  (beehive) => print('Updated beehive: ${beehive.id}'),
+);
+```
+
+---
+
+## DeleteBeehiveUseCase
+
+Deletes a beehive from an apiary.
+
+### Class Definition
+
+```dart
+class DeleteBeehiveUseCase implements UseCase<void, DeleteBeehiveParams>
+```
+
+### Parameters
+
+<ParamField path="params" type="DeleteBeehiveParams" required>
+  Parameters object containing deletion identifiers
+</ParamField>
+
+#### DeleteBeehiveParams
+
+<ParamField path="beehiveId" type="String" required>
+  ID of the beehive to delete
+</ParamField>
+
+<ParamField path="apiaryId" type="String" required>
+  ID of the parent apiary (required for backend authorization)
+</ParamField>
+
+### Return Type
+
+<ResponseField name="Either<Failure, void>" type="Either">
+  Returns either a `Failure` on error or `void` on successful deletion
+</ResponseField>
+
+### Example Usage
+
+```dart
+import 'package:Softbee/feature/beehive/domain/usecases/delete_beehive_usecase.dart';
+
+// Inject repository
+final deleteBeehiveUseCase = DeleteBeehiveUseCase(beehiveRepository);
+
+// Create deletion parameters
+final params = DeleteBeehiveParams(
+  beehiveId: 'beehive_789',
+  apiaryId: 'apiary_123',
+);
+
+// Execute use case
+final result = await deleteBeehiveUseCase(params);
+
+result.fold(
+  (failure) => print('Error deleting beehive: ${failure.message}'),
+  (_) => print('Beehive successfully deleted'),
+);
+```
+
+---
+
+## UseCase Interface
+
+All beehive use cases implement the generic `UseCase` interface:
+
+```dart
+abstract class UseCase<Type, Params> {
+  Future<Either<Failure, Type>> call(Params params);
+}
+```
+
+This interface ensures:
+- Consistent error handling with `Either<Failure, Type>`
+- Single responsibility (one operation per use case)
+- Easy testing and mocking
+- Clear separation of business logic from presentation
+
+## Error Handling
+
+All use cases return `Either<Failure, Result>` from the `either_dart` package:
+
+<Expandable title="Common Failure Types">
+
+### AuthFailure
+Returned when authentication token is missing or invalid.
+
+```dart
+AuthFailure('No se encontró el token de autenticación.')
+```
+
+### ServerFailure
+Returned when server operations fail.
+
+```dart
+ServerFailure(errorMessage)
+```
+
+</Expandable>
+
+### Handling Results
+
+```dart
+final result = await useCase(params);
+
+// Pattern 1: fold
+result.fold(
+  (failure) => handleError(failure),
+  (success) => handleSuccess(success),
+);
+
+// Pattern 2: isLeft/isRight
+if (result.isLeft) {
+  final failure = result.left;
+  // Handle error
+} else {
+  final data = result.right;
+  // Handle success
+}
+```
+
+## Dependency Injection
+
+Use cases require a `BeehiveRepository` instance. In production, inject via your DI container:
+
+```dart
+// Example with Riverpod
+final createBeehiveUseCaseProvider = Provider<CreateBeehiveUseCase>(
+  (ref) => CreateBeehiveUseCase(
+    ref.watch(beehiveRepositoryProvider),
+  ),
+);
+```
+
+## Location
+
+Source files:
+- `/lib/feature/beehive/domain/usecases/create_beehive_usecase.dart`
+- `/lib/feature/beehive/domain/usecases/get_beehives_by_apiary_usecase.dart`
+- `/lib/feature/beehive/domain/usecases/update_beehive_usecase.dart`
+- `/lib/feature/beehive/domain/usecases/delete_beehive_usecase.dart`

@@ -1,0 +1,480 @@
+---
+title: 'Recording Inspections'
+description: 'Document hive inspections with customizable questions and observations'
+icon: 'clipboard-check'
+---
+
+## Overview
+
+Inspections are a critical part of beekeeping management. Softbee allows you to create custom inspection questions and record detailed observations for each apiary.
+
+## Accessing Inspection Tools
+
+<Steps>
+  <Step title="Select Your Apiary">
+    From the main dashboard, select the apiary you want to inspect.
+  </Step>
+
+  <Step title="Navigate to Monitoring">
+    In the apiary dashboard, tap **"Monitoreo"** (Monitoring).
+  </Step>
+
+  <Step title="Access Questions Management">
+    Select the **"Preguntas"** (Questions) card to manage inspection questions.
+  </Step>
+</Steps>
+
+## Understanding Inspection Questions
+
+Softbee uses a customizable question system that allows you to:
+
+- Create apiary-specific inspection checklists
+- Define different question types for various data collection needs
+- Mark questions as required or optional
+- Organize questions by category
+- Set display order for logical workflow
+
+## Question Data Structure
+
+Each inspection question contains:
+
+| Field | Database Name | Type | Description | Required |
+|-------|---------------|------|-------------|---------|
+| ID | `id` | String | Unique identifier | Auto-generated |
+| Apiary ID | `apiary_id` | String | Associated apiary | Auto-set |
+| Question Text | `question_text` | String | The question to display | Yes |
+| Question Type | `question_type` | String | Type of response expected | Yes |
+| Category | `category` | String | Group/category for organization | No |
+| Required | `is_required` | Boolean | Must be answered | Yes |
+| Options | `options` | Array | Available choices (for select types) | Conditional |
+| Min Value | `min_value` | Integer | Minimum numeric value | Conditional |
+| Max Value | `max_value` | Integer | Maximum numeric value | Conditional |
+| Display Order | `display_order` | Integer | Sort order in the list | Yes |
+| Active | `is_active` | Boolean | Whether the question is active | Yes |
+
+## Question Types
+
+Softbee supports multiple question types to capture different kinds of inspection data:
+
+### Text Questions
+**Type**: `texto` (text)
+
+Use for:
+- Free-form observations
+- Descriptive notes
+- Any narrative information
+
+**Example Questions**:
+- "Describe the overall hive condition"
+- "Note any unusual bee behavior"
+- "Record queen sighting details"
+
+### Numeric Questions
+**Type**: `numero` (number)
+
+Use for:
+- Counting frames
+- Temperature readings
+- Weight measurements
+- Population estimates (if using numbers)
+
+**Example Questions**:
+- "How many frames of capped honey?"
+- "Hive weight (kg)"
+- "Temperature inside hive (°C)"
+
+**Configuration**:
+- Set `min_value` for the minimum allowed number
+- Set `max_value` for the maximum allowed number
+
+### Selection Questions
+**Type**: `seleccion` (select)
+
+Use for:
+- Multiple choice questions
+- Standardized responses
+- Categorical data
+
+**Example Questions**:
+- "Queen seen?" → Options: ["Yes", "No", "Not Sure"]
+- "Temperament" → Options: ["Calm", "Defensive", "Aggressive"]
+- "Brood pattern" → Options: ["Solid", "Spotty", "None"]
+
+**Configuration**:
+- Define `options` array with available choices
+- Users select one option from the list
+
+### Yes/No Questions
+**Type**: `si_no` (yes/no)
+
+Use for:
+- Binary decisions
+- Present/absent observations
+- True/false conditions
+
+**Example Questions**:
+- "Is the queen present?"
+- "Are there signs of disease?"
+- "Did you add a super?"
+
+**Configuration**:
+- Automatically provides "Sí" (Yes) and "No" (No) options
+
+## Creating Inspection Questions
+
+<Steps>
+  <Step title="Access Questions Management">
+    Navigate to the Questions Management page for your apiary.
+  </Step>
+
+  <Step title="Open Question Creation">
+    Click the **"Add New Question"** or `+` button.
+  </Step>
+
+  <Step title="Write the Question Text">
+    Enter a clear, specific question:
+    - Be concise and unambiguous
+    - Use consistent terminology
+    - Consider the beekeeper's workflow
+    
+    <Tip>
+      Good question: "How many frames of capped brood?"
+      
+      Poor question: "Brood?" (too vague)
+    </Tip>
+  </Step>
+
+  <Step title="Select Question Type">
+    Choose the appropriate type:
+    - **Texto**: For observations and notes
+    - **Numero**: For counts and measurements
+    - **Seleccion**: For predefined choices
+    - **Si/No**: For binary questions
+  </Step>
+
+  <Step title="Add Category (Optional)">
+    Group related questions by category:
+    - "Brood"
+    - "Food Stores"
+    - "Queen"
+    - "Health"
+    - "Equipment"
+    
+    Categories help organize large inspection checklists.
+  </Step>
+
+  <Step title="Configure Question Options">
+    Depending on the question type:
+    
+    **For Selection Questions**:
+    - Define the list of options
+    - Ensure options are mutually exclusive
+    - Keep options concise
+    
+    **For Numeric Questions**:
+    - Set `min_value` if there's a minimum
+    - Set `max_value` if there's a maximum
+    - Leave empty if no limits
+  </Step>
+
+  <Step title="Set Required Status">
+    Toggle **"Obligatoria"** (Required):
+    - **ON**: Must be answered to complete inspection
+    - **OFF**: Optional, can be skipped
+    
+    <Note>
+      Mark critical safety and health checks as required to ensure they're never missed.
+    </Note>
+  </Step>
+
+  <Step title="Set Display Order">
+    Enter a number for `display_order`:
+    - Lower numbers appear first
+    - Use increments of 10 (10, 20, 30...) to allow easy reordering
+    - Example: 10, 20, 30, 40
+    
+    This controls the order questions appear during inspections.
+  </Step>
+
+  <Step title="Activate the Question">
+    Ensure **"Activa"** (Active) is set to **true**:
+    - Active questions appear in inspections
+    - Inactive questions are hidden but preserved in the database
+  </Step>
+
+  <Step title="Save the Question">
+    Click **"Save"** or **"Create Question"** to add it to your inspection checklist.
+  </Step>
+</Steps>
+
+## Editing Inspection Questions
+
+<Steps>
+  <Step title="Locate the Question">
+    Find the question in your Questions Management list.
+  </Step>
+
+  <Step title="Open Edit Mode">
+    Click the edit icon next to the question.
+  </Step>
+
+  <Step title="Modify Fields">
+    Update any fields as needed:
+    - Question text
+    - Question type (be careful changing types)
+    - Options or numeric limits
+    - Required status
+    - Display order
+  </Step>
+
+  <Step title="Save Changes">
+    Click **"Update"** or **"Save Changes"**.
+  </Step>
+</Steps>
+
+<Warning>
+  Changing a question type (e.g., from text to numeric) may affect existing inspection data. Use caution when modifying question types.
+</Warning>
+
+## Organizing Inspection Questions
+
+### By Category
+
+Group questions into logical categories:
+
+```
+**Brood**
+- Queen seen? (yes/no)
+- Frames of capped brood? (number)
+- Brood pattern? (selection)
+
+**Food Stores**
+- Frames of capped honey? (number)
+- Pollen stores? (selection: Abundant/Adequate/Low)
+
+**Health**
+- Signs of disease? (yes/no)
+- Varroa mite check? (selection)
+- Hive temperament? (selection)
+
+**Equipment**
+- Hive condition? (selection)
+- Repairs needed? (yes/no)
+```
+
+### By Display Order
+
+Order questions to match your inspection workflow:
+
+1. **Safety checks first** (10-19)
+   - Protective equipment
+   - Smoker ready
+
+2. **External observations** (20-29)
+   - Entrance activity
+   - External hive condition
+
+3. **Internal inspection** (30-69)
+   - Brood frames (30-39)
+   - Food frames (40-49)
+   - Queen observation (50-59)
+   - Health checks (60-69)
+
+4. **Interventions** (70-89)
+   - Treatments applied
+   - Equipment changes
+
+5. **Summary** (90-99)
+   - Overall assessment
+   - Next steps
+
+## Conducting an Inspection
+
+<Steps>
+  <Step title="Prepare for Inspection">
+    Before opening a hive:
+    - Gather protective equipment
+    - Prepare smoker
+    - Have your device ready with Softbee open
+  </Step>
+
+  <Step title="Start the Inspection">
+    In Softbee:
+    - Navigate to the apiary
+    - Access the monitoring section
+    - Select the beehive to inspect
+  </Step>
+
+  <Step title="Answer Questions in Order">
+    Work through your custom questions:
+    - Questions appear in display order
+    - Answer required questions (marked with *)
+    - Skip optional questions if not applicable
+    - Use consistent terminology in text responses
+  </Step>
+
+  <Step title="Record Observations">
+    For each question:
+    - **Text**: Type observations clearly and concisely
+    - **Number**: Enter accurate counts or measurements
+    - **Selection**: Choose the most appropriate option
+    - **Yes/No**: Select based on your observation
+  </Step>
+
+  <Step title="Update Beehive Data">
+    After answering questions, update the beehive record:
+    - Activity level
+    - Population estimate
+    - Frame counts
+    - Health status
+    - Observations field
+  </Step>
+
+  <Step title="Complete and Save">
+    Save all inspection data:
+    - Review your answers
+    - Ensure required fields are complete
+    - Save the inspection record
+  </Step>
+</Steps>
+
+## Best Practices for Inspections
+
+### Question Design
+
+<Accordion title="Keep Questions Specific">
+  Specific questions yield actionable data:
+  
+  ✅ Good: "How many frames contain capped brood?"
+  
+  ❌ Poor: "How is the brood?"
+</Accordion>
+
+<Accordion title="Use Consistent Options">
+  For selection questions, use the same options across similar questions:
+  
+  If you rate bee population as "Alta/Media/Baja", use the same scale for activity level.
+</Accordion>
+
+<Accordion title="Balance Required vs. Optional">
+  Don't make everything required:
+  - Mark critical safety and health items as required
+  - Leave detailed observations optional
+  - This ensures inspections can be completed quickly when needed
+</Accordion>
+
+### Inspection Workflow
+
+<Tip>
+  **Standardize Your Routine**: Create a consistent inspection workflow:
+  1. External observations
+  2. Open hive carefully
+  3. Check outer frames first
+  4. Work through to center frames
+  5. Record findings as you go
+  6. Close hive properly
+  7. Complete any remaining questions
+</Tip>
+
+<Tip>
+  **Document Everything**: Even if a question is optional, answer it when possible. Historical data becomes invaluable over time.
+</Tip>
+
+<Tip>
+  **Use Categories Effectively**: If you have many questions, categories help you:
+  - Stay organized during inspections
+  - Focus on specific aspects (health check vs. production check)
+  - Train new beekeepers
+</Tip>
+
+### Seasonal Variations
+
+<Accordion title="Adapt Questions by Season">
+  You can create season-specific question sets:
+  
+  **Spring**:
+  - Swarm preparations?
+  - Queen cells present?
+  - Room for expansion?
+  
+  **Summer**:
+  - Honey production frames?
+  - Water collection observed?
+  - Heat stress signs?
+  
+  **Fall**:
+  - Winter prep status?
+  - Food stores adequate?
+  - Hive entrance reduced?
+  
+  **Winter**:
+  - Cluster position?
+  - Food consumption rate?
+  - Moisture issues?
+</Accordion>
+
+## Deactivating Questions
+
+To remove a question from active use without deleting historical data:
+
+<Steps>
+  <Step title="Edit the question" />
+  <Step title="Set `is_active` to false" />
+  <Step title="Save changes" />
+</Steps>
+
+Inactive questions:
+- Don't appear in new inspections
+- Preserve historical inspection data
+- Can be reactivated later
+
+## Integration with Beehive Records
+
+Inspection questions complement the beehive record fields:
+
+**Beehive Fields** (in `/beehive`):
+- Core metrics (population, frames, health)
+- Updated during every inspection
+- Structured data for trends
+
+**Custom Questions** (in `/questions`):
+- Flexible, apiary-specific observations
+- Detailed inspection notes
+- Can vary by season or beekeeper preference
+
+<Note>
+  Use both systems together: Update beehive records for structured data, and answer custom questions for detailed observations.
+</Note>
+
+## Troubleshooting
+
+<Accordion title="Questions not appearing in order">
+  Check the `display_order` values:
+  - Lower numbers appear first
+  - Ensure each question has a unique order number
+  - Re-save questions if order seems wrong
+</Accordion>
+
+<Accordion title="Can't make a question required">
+  Ensure:
+  - The `is_required` field is set to `true`
+  - The question is active (`is_active` = true)
+  - Save the question after changes
+</Accordion>
+
+<Accordion title="Options not showing for selection questions">
+  Verify:
+  - Question type is set to "seleccion"
+  - Options array is properly formatted
+  - At least one option is defined
+</Accordion>
+
+## Next Steps
+
+- [Update beehive records](/guides/managing-beehives) with inspection findings
+- [Track inventory usage](/guides/inventory-tracking) for treatments and interventions
+- Review inspection history to identify trends and patterns
+
+<Tip>
+  Regular, consistent inspections with well-designed questions create a valuable historical record that helps you become a better beekeeper over time.
+</Tip>

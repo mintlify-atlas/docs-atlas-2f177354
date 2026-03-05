@@ -1,0 +1,235 @@
+---
+title: 'Theme'
+description: 'Application colors and theme configuration'
+---
+
+## Overview
+
+Softbee uses a bee-themed color palette centered around yellow tones. The theme is defined through the `AppColors` class.
+
+**Source:** `lib/core/theme/app_colors.dart`
+
+## AppColors
+
+A static class containing all application color constants.
+
+```dart
+abstract class AppColors {
+  static const Color primaryYellow = Color(0xFFFFD100);
+  static const Color accentYellow = Color(0xFFFFAB00);
+  static const Color lightYellow = Color(0xFFFFF8E1);
+  static const Color darkYellow = Color(0xFFF9A825);
+  static const Color textDark = Color(0xFF333333);
+}
+```
+
+## Color Palette
+
+### Primary Colors
+
+<ResponseField name="primaryYellow" type="Color" default="#FFD100">
+  Main brand color - bright yellow used for primary actions and branding
+</ResponseField>
+
+<ResponseField name="accentYellow" type="Color" default="#FFAB00">
+  Accent color - amber yellow for highlights and secondary elements
+</ResponseField>
+
+### Supporting Colors
+
+<ResponseField name="lightYellow" type="Color" default="#FFF8E1">
+  Light yellow for backgrounds and subtle highlights
+</ResponseField>
+
+<ResponseField name="darkYellow" type="Color" default="#F9A825">
+  Dark yellow for hover states and emphasis
+</ResponseField>
+
+### Text Colors
+
+<ResponseField name="textDark" type="Color" default="#333333">
+  Primary text color - dark gray for optimal readability
+</ResponseField>
+
+## Usage Examples
+
+### Using Colors in Widgets
+
+```dart
+import 'package:Softbee/core/theme/app_colors.dart';
+
+Container(
+  color: AppColors.primaryYellow,
+  child: Text(
+    'Welcome to Softbee',
+    style: TextStyle(color: AppColors.textDark),
+  ),
+)
+```
+
+### Button Styling
+
+```dart
+ElevatedButton(
+  style: ElevatedButton.styleFrom(
+    backgroundColor: AppColors.primaryYellow,
+    foregroundColor: AppColors.textDark,
+  ),
+  onPressed: () {},
+  child: const Text('Add Apiary'),
+)
+```
+
+### Background with Light Yellow
+
+```dart
+Scaffold(
+  backgroundColor: AppColors.lightYellow,
+  body: Column(
+    children: [
+      // Your content here
+    ],
+  ),
+)
+```
+
+### Gradient Using Yellow Shades
+
+```dart
+Container(
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      colors: [
+        AppColors.lightYellow,
+        AppColors.primaryYellow,
+        AppColors.darkYellow,
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+  ),
+)
+```
+
+## Color Usage Guidelines
+
+### Primary Actions
+Use `primaryYellow` for:
+- Primary buttons
+- Call-to-action elements
+- Active navigation items
+- Selected states
+
+### Accents and Highlights
+Use `accentYellow` for:
+- Secondary buttons
+- Icons and decorative elements
+- Badges and notifications
+- Hover states on primary elements
+
+### Backgrounds
+Use `lightYellow` for:
+- Page backgrounds
+- Card backgrounds
+- Section dividers
+- Subtle highlights
+
+### Emphasis
+Use `darkYellow` for:
+- Hover states
+- Pressed states
+- Important information
+- Borders on active elements
+
+### Text
+Use `textDark` for:
+- Primary text content
+- Labels and headings
+- Form inputs
+- Body copy
+
+## Theme Integration
+
+While Softbee currently uses direct color references, you can extend this to a full MaterialApp theme:
+
+<Expandable title="Example: Full Theme Configuration">
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:Softbee/core/theme/app_colors.dart';
+
+ThemeData buildAppTheme() {
+  return ThemeData(
+    primaryColor: AppColors.primaryYellow,
+    scaffoldBackgroundColor: AppColors.lightYellow,
+    colorScheme: ColorScheme(
+      primary: AppColors.primaryYellow,
+      secondary: AppColors.accentYellow,
+      surface: Colors.white,
+      background: AppColors.lightYellow,
+      error: Colors.red,
+      onPrimary: AppColors.textDark,
+      onSecondary: AppColors.textDark,
+      onSurface: AppColors.textDark,
+      onBackground: AppColors.textDark,
+      onError: Colors.white,
+      brightness: Brightness.light,
+    ),
+    textTheme: TextTheme(
+      displayLarge: TextStyle(color: AppColors.textDark),
+      bodyLarge: TextStyle(color: AppColors.textDark),
+      bodyMedium: TextStyle(color: AppColors.textDark),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primaryYellow,
+        foregroundColor: AppColors.textDark,
+      ),
+    ),
+  );
+}
+```
+
+Then in `main.dart`:
+
+```dart
+MaterialApp.router(
+  theme: buildAppTheme(),
+  routerConfig: router,
+)
+```
+
+</Expandable>
+
+## Accessibility Considerations
+
+### Contrast Ratios
+
+- **Primary Yellow on White:** Good contrast for backgrounds
+- **Text Dark on Light Yellow:** Excellent readability (contrast ratio > 7:1)
+- **Text Dark on Primary Yellow:** Good readability (contrast ratio > 4.5:1)
+
+### Color Blindness
+
+The yellow-based palette is generally accessible for most types of color blindness. However, consider:
+- Always pair color with text labels or icons
+- Don't rely solely on color to convey information
+- Use sufficient contrast for text
+
+## Dark Mode Support
+
+Currently, Softbee uses a light color scheme. To add dark mode support, consider creating:
+
+```dart
+abstract class AppColorsDark {
+  static const Color primaryYellow = Color(0xFFFFC107);
+  static const Color accentYellow = Color(0xFFFFB300);
+  static const Color darkBackground = Color(0xFF1A1A1A);
+  static const Color textLight = Color(0xFFE0E0E0);
+}
+```
+
+## See Also
+
+- [Flutter Color Documentation](https://api.flutter.dev/flutter/dart-ui/Color-class.html)
+- [Material Design Color System](https://m3.material.io/styles/color/overview)

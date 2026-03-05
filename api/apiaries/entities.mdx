@@ -1,0 +1,243 @@
+---
+title: 'Apiary Entity'
+description: 'Core domain entity representing an apiary (bee yard) in the Softbee application'
+---
+
+## Overview
+
+The `Apiary` entity represents a bee yard or apiary in the Softbee beekeeping management system. It is the core domain entity that contains information about a beekeeper's apiary location, including metadata such as name, location, beehive count, and treatment status.
+
+**Source:** `lib/feature/apiaries/domain/entities/apiary.dart`
+
+## Class Definition
+
+```dart
+class Apiary {
+  final String id;
+  final String userId;
+  final String name;
+  final String? location;
+  final int? beehivesCount;
+  final bool treatments;
+  final DateTime? createdAt;
+
+  Apiary({
+    required this.id,
+    required this.userId,
+    required this.name,
+    this.location,
+    this.beehivesCount,
+    required this.treatments,
+    this.createdAt,
+  });
+}
+```
+
+## Properties
+
+<ParamField path="id" type="String" required>
+  Unique identifier for the apiary. This is the primary key used to reference the apiary throughout the application.
+</ParamField>
+
+<ParamField path="userId" type="String" required>
+  The ID of the user who owns this apiary. Used for authorization and filtering apiaries by owner.
+</ParamField>
+
+<ParamField path="name" type="String" required>
+  The display name of the apiary. This is the human-readable identifier that beekeepers use to distinguish between their different apiaries.
+</ParamField>
+
+<ParamField path="location" type="String?" default="null">
+  Optional geographical location or address of the apiary. This can be a street address, GPS coordinates, or any location description.
+</ParamField>
+
+<ParamField path="beehivesCount" type="int?" default="null">
+  Optional count of beehives in this apiary. Helps beekeepers track the size of their operation.
+</ParamField>
+
+<ParamField path="treatments" type="bool" required>
+  Boolean flag indicating whether treatments are being applied to the beehives in this apiary. Important for tracking treatment protocols and compliance.
+</ParamField>
+
+<ParamField path="createdAt" type="DateTime?" default="null">
+  Optional timestamp indicating when the apiary was created in the system.
+</ParamField>
+
+## Methods
+
+### fromJson
+
+Factory constructor that creates an `Apiary` instance from a JSON map.
+
+```dart
+factory Apiary.fromJson(Map<String, dynamic> json)
+```
+
+<ParamField path="json" type="Map<String, dynamic>" required>
+  JSON map containing apiary data with the following structure:
+  - `id`: Apiary identifier (converted to String)
+  - `user_id`: User identifier
+  - `name`: Apiary name
+  - `location`: Optional location string
+  - `beehives_count`: Optional beehive count
+  - `treatments`: Boolean flag (defaults to false if not provided)
+  - `created_at`: Optional creation timestamp in GMT format
+</ParamField>
+
+<ResponseField name="return" type="Apiary">
+  A new Apiary instance populated with data from the JSON map.
+</ResponseField>
+
+**Example:**
+
+```dart
+final json = {
+  'id': '123',
+  'user_id': 'user_456',
+  'name': 'Meadow Apiary',
+  'location': '123 Bee Lane, Honey Valley',
+  'beehives_count': 15,
+  'treatments': true,
+  'created_at': 'Mon, 15 Jan 2024 10:30:00 GMT'
+};
+
+final apiary = Apiary.fromJson(json);
+print(apiary.name); // Output: Meadow Apiary
+```
+
+### toJson
+
+Converts the Apiary instance to a JSON map.
+
+```dart
+Map<String, dynamic> toJson()
+```
+
+<ResponseField name="return" type="Map<String, dynamic>">
+  JSON map representation of the apiary with snake_case keys matching the API format.
+</ResponseField>
+
+**Example:**
+
+```dart
+final apiary = Apiary(
+  id: '123',
+  userId: 'user_456',
+  name: 'Meadow Apiary',
+  location: '123 Bee Lane, Honey Valley',
+  beehivesCount: 15,
+  treatments: true,
+  createdAt: DateTime.now(),
+);
+
+final json = apiary.toJson();
+print(json['name']); // Output: Meadow Apiary
+```
+
+### copyWith
+
+Creates a copy of the Apiary with optionally updated fields.
+
+```dart
+Apiary copyWith({
+  String? id,
+  String? userId,
+  String? name,
+  String? location,
+  int? beehivesCount,
+  bool? treatments,
+  DateTime? createdAt,
+})
+```
+
+<ParamField path="id" type="String?">
+  New ID value (rarely used as IDs are typically immutable)
+</ParamField>
+
+<ParamField path="userId" type="String?">
+  New user ID value
+</ParamField>
+
+<ParamField path="name" type="String?">
+  New apiary name
+</ParamField>
+
+<ParamField path="location" type="String?">
+  New location
+</ParamField>
+
+<ParamField path="beehivesCount" type="int?">
+  New beehive count
+</ParamField>
+
+<ParamField path="treatments" type="bool?">
+  New treatments status
+</ParamField>
+
+<ParamField path="createdAt" type="DateTime?">
+  New creation timestamp
+</ParamField>
+
+<ResponseField name="return" type="Apiary">
+  A new Apiary instance with the specified fields updated and all other fields copied from the original.
+</ResponseField>
+
+**Example:**
+
+```dart
+final apiary = Apiary(
+  id: '123',
+  userId: 'user_456',
+  name: 'Meadow Apiary',
+  location: '123 Bee Lane',
+  beehivesCount: 15,
+  treatments: false,
+);
+
+// Update the beehive count and treatments status
+final updated = apiary.copyWith(
+  beehivesCount: 20,
+  treatments: true,
+);
+
+print(updated.beehivesCount); // Output: 20
+print(updated.name); // Output: Meadow Apiary (unchanged)
+```
+
+## Usage Examples
+
+### Creating a new Apiary
+
+```dart
+final newApiary = Apiary(
+  id: 'apiary_001',
+  userId: 'user_123',
+  name: 'Hillside Apiary',
+  location: 'North Field, Farm Road',
+  beehivesCount: 12,
+  treatments: false,
+  createdAt: DateTime.now(),
+);
+```
+
+### Parsing from API response
+
+```dart
+final apiResponse = await http.get('/api/apiaries/123');
+final json = jsonDecode(apiResponse.body);
+final apiary = Apiary.fromJson(json);
+```
+
+### Updating an apiary
+
+```dart
+final updatedApiary = currentApiary.copyWith(
+  name: 'Hillside Apiary - North',
+  beehivesCount: 18,
+);
+```
+
+## Related
+
+- [Use Cases](/api/apiaries/usecases) - Operations that can be performed on apiaries
+- [Repository](/api/apiaries/repositories) - Data access layer for apiaries

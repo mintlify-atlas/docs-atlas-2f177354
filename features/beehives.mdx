@@ -1,0 +1,362 @@
+---
+title: 'Beehive Management'
+description: 'Track individual beehives with detailed health, population, and production metrics'
+icon: 'diagram-project'
+---
+
+## Overview
+
+The Beehive Management feature allows you to track individual hives within your apiaries. Each beehive record captures essential information about hive health, activity levels, population, food stores, brood patterns, and production capacity.
+
+## What is a Beehive?
+
+In Softbee, a beehive represents a single colony of bees housed in a hive structure. Each beehive belongs to a specific apiary and contains detailed tracking information that helps beekeepers make informed management decisions.
+
+## Beehive Entity
+
+Each beehive contains comprehensive data about the colony:
+
+```dart
+class Beehive {
+  final String id;                      // Unique identifier
+  final String apiaryId;                // Parent apiary
+  final int? beehiveNumber;             // Hive number (e.g., 1, 2, 3)
+  final String? activityLevel;          // Alta, Media, Baja
+  final String? beePopulation;          // Alta, Media, Baja
+  final int? foodFrames;                // Number of food frames (0-10)
+  final int? broodFrames;               // Number of brood frames (0-10)
+  final String? hiveStatus;             // Current configuration status
+  final String? healthStatus;           // Health condition
+  final String? hasProductionChamber;   // Si, No
+  final String? observations;           // Freeform notes
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+}
+```
+
+**Source:** `lib/feature/beehive/domain/entities/beehive.dart`
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Add Hives" icon="plus-circle">
+    Register new beehives with detailed initial metrics
+  </Card>
+  <Card title="Track Activity" icon="chart-line">
+    Monitor activity levels: Alta, Media, or Baja
+  </Card>
+  <Card title="Health Monitoring" icon="heart-pulse">
+    Record health status and disease presence
+  </Card>
+  <Card title="Production Tracking" icon="box-open">
+    Track production chambers and honey collection
+  </Card>
+</CardGroup>
+
+## Beehive Attributes
+
+### Activity Level
+
+Indicates how active the colony is:
+
+- **Alta (High)**: Very active, bees coming and going frequently
+- **Media (Medium)**: Moderate activity, normal foraging
+- **Baja (Low)**: Reduced activity, potential issues
+
+<Note>
+  Low activity levels may indicate problems such as queenlessness, disease, or insufficient food stores.
+</Note>
+
+**Enum:** `lib/feature/beehive/domain/enums/beehive_enums.dart:1-8`
+
+### Bee Population
+
+Estimated population size of the colony:
+
+- **Alta (High)**: Strong colony, many frames covered with bees
+- **Media (Medium)**: Average colony strength
+- **Baja (Low)**: Weak colony, few frames covered
+
+**Enum:** `lib/feature/beehive/domain/enums/beehive_enums.dart:10-17`
+
+### Food Frames
+
+Number of frames containing honey and pollen stores (0-10).
+
+<Tip>
+  Adequate food stores (typically 4-6 frames) are essential, especially before winter or dearth periods.
+</Tip>
+
+### Brood Frames
+
+Number of frames containing eggs, larvae, and capped brood (0-10).
+
+Healthy colonies typically have:
+- Good brood pattern (solid, minimal gaps)
+- Multiple ages of brood present
+- 4-7 frames of brood during active season
+
+### Hive Status
+
+Describes the physical configuration:
+
+- **Cámara de cría y producción**: Single brood/production chamber
+- **Cámara de cría y doble alza de producción**: Brood chamber + 2 honey supers
+- **Cámara de cría**: Brood chamber only
+- **Cámara de producción**: Production chamber only
+
+**Enum:** `lib/feature/beehive/domain/enums/beehive_enums.dart:19-29`
+
+### Health Status
+
+Tracks disease and pest presence:
+
+- **Ninguno (None)**: Healthy colony, no issues detected
+- **Presencia barroa**: Varroa mite infestation
+- **Presencia de plagas**: Other pests present (wax moths, beetles, etc.)
+- **Enfermedad**: Disease symptoms detected
+
+<Warning>
+  Varroa mites are one of the most serious threats to honeybee colonies. Regular monitoring and treatment are essential.
+</Warning>
+
+**Enum:** `lib/feature/beehive/domain/enums/beehive_enums.dart:31-39`
+
+### Production Chamber
+
+Indicates whether a honey super is installed:
+
+- **Si (Yes)**: Production chamber is present
+- **No (No)**: No production chamber currently
+
+**Enum:** `lib/feature/beehive/domain/enums/beehive_enums.dart:41-48`
+
+## Creating a Beehive
+
+Add new hives to your apiary through the hive management interface.
+
+<Steps>
+  <Step title="Navigate to Apiary">
+    Select the apiary where you want to add a beehive from your dashboard.
+  </Step>
+  
+  <Step title="Open Beehive Form">
+    Click "Nueva Colmena" (New Hive) button to open the creation dialog.
+  </Step>
+  
+  <Step title="Enter Hive Details">
+    Fill in the beehive information:
+    
+    - **Hive Number**: Unique identifier within the apiary
+    - **Activity Level**: Select Alta, Media, or Baja
+    - **Population**: Estimate bee population density
+    - **Food Frames**: Count frames with honey/pollen
+    - **Brood Frames**: Count frames with brood
+    - **Hive Status**: Select configuration type
+    - **Health Status**: Note any health concerns
+    - **Production Chamber**: Indicate if honey super is present
+    - **Observations**: Add any additional notes
+  </Step>
+  
+  <Step title="Save Beehive">
+    Click "Guardar" to create the beehive record. It will appear in the apiary's hive list.
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/beehive/presentation/widgets/beehive_form_dialog.dart`
+
+## Viewing Beehives
+
+The hive management screen displays all hives for a selected apiary.
+
+### Dashboard Statistics
+
+At the top of the hive list, you'll see summary statistics:
+
+- **Total Colmenas**: Total number of hives in this apiary
+- **Alta Actividad**: Count of hives with high activity
+- **Con Producción**: Number of hives with production chambers
+- **Saludables**: Hives with no health issues
+
+### Hive Cards
+
+Each hive is displayed in a card showing:
+
+- **Hive Number**: Primary identifier
+- **Activity Level**: Color-coded indicator (green=alta, amber=media, red=baja)
+- **Health Status**: Warning icon if issues present
+- **Production Chamber Status**: Indicator of honey super presence
+- **Observations**: Any notes from last inspection
+- **Food/Brood Indicators**: Visual progress circles (desktop view)
+
+**Implementation:** `lib/feature/beehive/presentation/pages/beehive_management_page.dart:632-886`
+
+### Responsive Design
+
+The hive list adapts to screen size:
+
+- **Desktop (1024px+)**: 2-column grid with detailed cards
+- **Tablet (768-1024px)**: Single column with medium-sized cards
+- **Mobile (768px and below)**: Stacked list with compact cards
+
+## Updating a Beehive
+
+Modify hive records as conditions change during inspections.
+
+<Steps>
+  <Step title="Select Hive">
+    Find the beehive in the list and click the menu icon (⋮).
+  </Step>
+  
+  <Step title="Choose Edit">
+    Select "Editar" from the dropdown menu to open the edit form.
+  </Step>
+  
+  <Step title="Update Fields">
+    Modify any of the beehive attributes based on your latest inspection.
+  </Step>
+  
+  <Step title="Save Changes">
+    Changes are saved immediately and timestamped with `updatedAt`.
+  </Step>
+</Steps>
+
+<Info>
+  Regular updates help track hive health trends over time. Consider updating after each inspection or at least monthly during active season.
+</Info>
+
+## Deleting a Beehive
+
+Remove hives that are no longer active (died, split, sold, etc.).
+
+<Steps>
+  <Step title="Open Hive Menu">
+    Click the menu icon on the hive card.
+  </Step>
+  
+  <Step title="Select Delete">
+    Choose "Eliminar" from the menu.
+  </Step>
+  
+  <Step title="Confirm Deletion">
+    Confirm the action in the warning dialog. This action is permanent.
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/beehive/presentation/pages/beehive_management_page.dart:983-1012`
+
+## Viewing Hive Details
+
+See complete information about a beehive in a detail view.
+
+**Detail View Shows:**
+- All hive attributes
+- Creation and last update timestamps
+- Complete observation history
+- Frame counts with visual indicators
+
+**Implementation:** `lib/feature/beehive/presentation/pages/beehive_management_page.dart:1014-1068`
+
+## Use Cases
+
+The beehive feature implements standard CRUD operations:
+
+| Use Case | Purpose | Location |
+|----------|---------|----------|
+| `CreateBeehiveUseCase` | Add new hive to apiary | `lib/feature/beehive/domain/usecases/create_beehive_usecase.dart` |
+| `GetBeehivesByApiaryUseCase` | Fetch all hives for an apiary | `lib/feature/beehive/domain/usecases/get_beehives_by_apiary_usecase.dart` |
+| `UpdateBeehiveUseCase` | Modify hive data | `lib/feature/beehive/domain/usecases/update_beehive_usecase.dart` |
+| `DeleteBeehiveUseCase` | Remove hive from system | `lib/feature/beehive/domain/usecases/delete_beehive_usecase.dart` |
+
+## State Management
+
+Beehive data is managed with Riverpod:
+
+```dart
+final beehiveControllerProvider = StateNotifierProvider<BeehiveController, BeehiveState>(...)
+```
+
+**State includes:**
+- `beehives`: List of all hives for current apiary
+- `isLoading`: Loading indicator
+- `errorMessage`: Error display
+- `successMessage`: Success notifications
+
+**Source:** `lib/feature/beehive/presentation/controllers/beehive_controller.dart`
+
+## Search and Filter
+
+Quickly find specific hives using the search bar:
+
+- Search by hive number
+- Search by observations text
+- Real-time filtering as you type
+
+**Implementation:** `lib/feature/beehive/presentation/pages/beehive_management_page.dart:392-465`
+
+## Visual Indicators
+
+### Activity Level Colors
+
+- **Alta**: Green (`Colors.green[700]`)
+- **Media**: Amber (`Colors.amber[700]`)
+- **Baja**: Red (`Colors.red[700]`)
+
+### Health Status Icons
+
+- **Ninguno**: Green heart icon
+- **Any issues**: Red warning icon
+
+### Progress Indicators (Desktop)
+
+Food and brood frames are displayed as circular progress indicators:
+- Blue circle for food frames
+- Orange circle for brood frames
+- Visual percentage based on 10-frame standard
+
+**Implementation:** `lib/feature/beehive/presentation/pages/beehive_management_page.dart:799-876`
+
+## Integration with Monitoring
+
+Beehive data integrates with the monitoring feature to:
+
+- Track health trends over time
+- Answer inspection questions
+- Generate reports
+- Alert on potential issues
+
+See [Monitoring](/features/monitoring) for more details.
+
+## Best Practices
+
+<Tip>
+  Number your hives consistently. Use painted numbers on hive bodies or permanent markers to match physical hives with digital records.
+</Tip>
+
+- Update hive records immediately after inspections while details are fresh
+- Use the observations field to note anything unusual
+- Track food frames carefully, especially before winter
+- Monitor health status regularly to catch problems early
+- Keep production chamber status current for accurate honey tracking
+
+## Data Architecture
+
+Softbee follows Clean Architecture:
+
+```
+Presentation (UI)
+    ↓
+BeehiveController
+    ↓
+Use Cases
+    ↓
+BeehiveRepository
+    ↓
+BeehiveRemoteDataSource
+    ↓
+Backend API
+```
+
+**Repository:** `lib/feature/beehive/data/repositories/beehive_repository_impl.dart`
+
+**Data Source:** `lib/feature/beehive/data/datasources/beehive_remote_datasource.dart`

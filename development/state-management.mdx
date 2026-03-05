@@ -1,0 +1,509 @@
+---
+title: 'State Management'
+description: 'Managing application state with Riverpod'
+icon: 'arrows-rotate'
+---
+
+## Overview
+
+Softbee uses **Riverpod 2.x** for state management, providing a robust, compile-safe approach to managing application state. Riverpod follows a provider-based architecture that integrates seamlessly with Clean Architecture.
+
+## Provider Architecture
+
+All state management follows a layered provider structure:
+
+1. **Data Source Providers** - Provide access to data sources
+2. **Repository Providers** - Provide repository implementations
+3. **Use Case Providers** - Provide business logic use cases
+4. **Controller Providers** - Manage UI state with StateNotifier
+
+## Provider Setup
+
+### Example: Apiary Feature Providers
+
+```dart lib/feature/apiaries/presentation/providers/apiary_providers.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// 1. Data Source Provider
+final apiaryRemoteDataSourceProvider = Provider<ApiaryRemoteDataSource>((ref) {
+  final dio = ref.read(dioClientProvider);
+  final localDataSource = ref.read(authLocalDataSourceProvider);
+  return ApiaryRemoteDataSourceImpl(dio, localDataSource);
+});
+
+// 2. Repository Provider
+final apiaryRepositoryProvider = Provider<ApiaryRepository>((ref) {
+  return ApiaryRepositoryImpl(
+    remoteDataSource: ref.read(apiaryRemoteDataSourceProvider),
+    localDataSource: ref.read(authLocalDataSourceProvider),
+  );
+});
+
+// 3. Use Case Providers
+final getApiariesUseCaseProvider = Provider<GetApiariesUseCase>((ref) {
+  return GetApiariesUseCase(ref.read(apiaryRepositoryProvider));
+});
+
+final createApiaryUseCaseProvider = Provider<CreateApiaryUseCase>((ref) {
+  return CreateApiaryUseCase(ref.read(apiaryRepositoryProvider));
+});
+
+// 4. Controller Provider (StateNotifier)
+final apiariesControllerProvider =
+    StateNotifierProvider<ApiariesController, ApiariesState>((ref) {
+  final getApiariesUseCase = ref.read(getApiariesUseCaseProvider);
+  final createApiaryUseCase = ref.read(createApiaryUseCaseProvider);
+  final updateApiaryUseCase = ref.read(updateApiaryUseCaseProvider);
+  final deleteApiaryUseCase = ref.read(deleteApiaryUseCaseProvider);
+  final authController = ref.watch(authControllerProvider.notifier);
+  
+  return ApiariesController(
+    getApiariesUseCase: getApiariesUseCase,
+    createApiaryUseCase: createApiaryUseCase,
+    updateApiaryUseCase: updateApiaryUseCase,
+    deleteApiaryUseCase: deleteApiaryUseCase,
+    authController: authController,
+  );
+});
+```
+
+<Note>
+Providers are defined in a hierarchical structure where lower-level providers (data sources) are composed into higher-level providers (controllers).
+</Note>
+
+## State Classes
+
+State classes use **Equatable** for value comparison and immutability:
+
+```dart lib/feature/apiaries/presentation/controllers/apiaries_controller.dart
+class ApiariesState extends Equatable {
+  final bool isLoading;
+  final bool isCreating;
+  final bool isUpdating;
+  final bool isDeleting;
+  final List<Apiary> allApiaries;
+  final List<Apiary> filteredApiaries;
+  final String searchQuery;
+  final String? errorMessage;
+  final String? successMessage;
+
+  const ApiariesState({
+    this.isLoading = false,
+    this.isCreating = false,
+    this.isUpdating = false,
+    this.isDeleting = false,
+    this.allApiaries = const [],
+    this.filteredApiaries = const [],
+    this.searchQuery = '',
+    this.errorMessage,
+    this.successMessage,
+  });
+
+  ApiariesState copyWith({
+    bool? isLoading,
+    bool? isCreating,
+    List<Apiary>? allApiaries,
+    List<Apiary>? filteredApiaries,
+    String? searchQuery,
+    String? errorMessage,
+    String? successMessage,
+    bool clearError = false,
+    bool clearSuccess = false,
+  }) {
+    return ApiariesState(
+      isLoading: isLoading ?? this.isLoading,
+      isCreating: isCreating ?? this.isCreating,
+      allApiaries: allApiaries ?? this.allApiaries,
+      filteredApiaries: filteredApiaries ?? this.filteredApiaries,
+      searchQuery: searchQuery ?? this.searchQuery,
+      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      successMessage: clearSuccess ? null : successMessage ?? this.successMessage,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    isLoading,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    allApiaries,
+    filteredApiaries,
+    searchQuery,
+    errorMessage,
+    successMessage,
+  ];
+}
+```
+
+<Accordion title="Why Equatable?">
+Equatable allows Riverpod to efficiently compare state objects and only rebuild widgets when the actual values change, not just when a new instance is created.
+</Accordion>
+
+## Controllers (StateNotifier)
+
+Controllers manage state transitions and business logic orchestration:
+
+```dart lib/feature/apiaries/presentation/controllers/apiaries_controller.dart
+class ApiariesController extends StateNotifier<ApiariesState> {
+  final GetApiariesUseCase getApiariesUseCase;
+  final CreateApiaryUseCase createApiaryUseCase;
+  final UpdateApiaryUseCase updateApiaryUseCase;
+  final DeleteApiaryUseCase deleteApiaryUseCase;
+  final AuthController authController;
+
+  ApiariesController({
+    required this.getApiariesUseCase,
+    required this.createApiaryUseCase,
+    required this.updateApiaryUseCase,
+    required this.deleteApiaryUseCase,
+    required this.authController,
+  }) : super(const ApiariesState());
+
+  String? get _currentUserId => authController.state.user?.id;
+  String? get _currentToken => authController.state.token;
+
+  Future<void> fetchApiaries() async {
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      clearSuccess: true,
+    );
+
+    if (!_isAuthenticated()) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'User not authenticated.',
+      );
+      return;
+    }
+
+    final result = await getApiariesUseCase(NoParams());
+
+    result.fold(
+      (failure) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: _mapFailureToMessage(failure, 'fetching apiaries'),
+        );
+      },
+      (allApiaries) {
+        final userApiaries = allApiaries
+            .where((apiary) => apiary.userId == _currentUserId)
+            .toList();
+        state = state.copyWith(
+          isLoading: false,
+          allApiaries: userApiaries,
+          filteredApiaries: userApiaries,
+          searchQuery: '',
+        );
+      },
+    );
+  }
+
+  Future<void> createApiary(
+    String name,
+    String? location,
+    int? beehivesCount,
+    bool treatments,
+  ) async {
+    state = state.copyWith(
+      isCreating: true,
+      clearError: true,
+      clearSuccess: true,
+    );
+
+    if (!_isAuthenticated()) {
+      state = state.copyWith(
+        isCreating: false,
+        errorMessage: 'User not authenticated.',
+      );
+      return;
+    }
+
+    final params = CreateApiaryParams(
+      userId: _currentUserId!,
+      name: name,
+      location: location,
+      beehivesCount: beehivesCount,
+      treatments: treatments,
+    );
+
+    final result = await createApiaryUseCase(params);
+
+    result.fold(
+      (failure) {
+        state = state.copyWith(
+          isCreating: false,
+          errorMessage: _mapFailureToMessage(failure, 'creating apiary'),
+        );
+      },
+      (newApiary) {
+        final updatedAllApiaries = [...state.allApiaries, newApiary];
+        state = state.copyWith(
+          isCreating: false,
+          allApiaries: updatedAllApiaries,
+          successMessage: 'Apiary created successfully!',
+        );
+        applyFilter(state.searchQuery);
+      },
+    );
+  }
+
+  void applyFilter(String query) {
+    final lowerCaseQuery = query.toLowerCase();
+    final filtered = state.allApiaries.where((apiary) {
+      return apiary.name.toLowerCase().contains(lowerCaseQuery);
+    }).toList();
+
+    state = state.copyWith(
+      searchQuery: query,
+      filteredApiaries: filtered
+    );
+  }
+
+  bool _isAuthenticated() {
+    return authController.state.isAuthenticated &&
+        authController.state.user != null &&
+        _currentUserId != null;
+  }
+
+  String _mapFailureToMessage(Failure failure, String operation) {
+    switch (failure.runtimeType) {
+      case ServerFailure:
+        return 'Server Error during $operation';
+      case AuthFailure:
+        return 'Authentication Error during $operation';
+      case NetworkFailure:
+        return 'Network Error during $operation';
+      default:
+        return 'An unexpected error occurred during $operation';
+    }
+  }
+}
+```
+
+## Consuming State in Widgets
+
+### Using ConsumerWidget
+
+```dart
+class ApiaryListPage extends ConsumerWidget {
+  const ApiaryListPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final apiariesState = ref.watch(apiariesControllerProvider);
+    
+    if (apiariesState.isLoading) {
+      return const CircularProgressIndicator();
+    }
+    
+    if (apiariesState.errorMessage != null) {
+      return Text('Error: ${apiariesState.errorMessage}');
+    }
+    
+    return ListView.builder(
+      itemCount: apiariesState.filteredApiaries.length,
+      itemBuilder: (context, index) {
+        final apiary = apiariesState.filteredApiaries[index];
+        return ApiaryCard(apiary: apiary);
+      },
+    );
+  }
+}
+```
+
+### Triggering Actions
+
+```dart
+class CreateApiaryButton extends ConsumerWidget {
+  const CreateApiaryButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ElevatedButton(
+      onPressed: () {
+        // Access controller notifier to call methods
+        ref.read(apiariesControllerProvider.notifier).createApiary(
+          'New Apiary',
+          'Location',
+          10,
+          false,
+        );
+      },
+      child: const Text('Create Apiary'),
+    );
+  }
+}
+```
+
+<Warning>
+Use `ref.watch()` to listen to state changes and rebuild widgets.
+Use `ref.read()` to access providers without listening (e.g., in callbacks).
+</Warning>
+
+## Global Providers
+
+Some providers are global and used across features:
+
+### Dio Client Provider
+
+```dart lib/core/network/dio_client.dart
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+
+final dioClientProvider = Provider<Dio>((ref) {
+  final baseUrl = kIsWeb
+      ? 'http://127.0.0.1:5000'
+      : (defaultTargetPlatform == TargetPlatform.android
+            ? 'http://10.0.2.2:5000'
+            : 'http://127.0.0.1:5000');
+
+  final BaseOptions options = BaseOptions(
+    baseUrl: baseUrl,
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+  );
+  
+  return Dio(options);
+});
+```
+
+### Auth State Provider
+
+```dart lib/feature/auth/presentation/providers/auth_providers.dart
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+  (ref) {
+    return AuthController(
+      loginUseCase: ref.read(loginUseCaseProvider),
+      logoutUseCase: ref.read(logoutUseCaseProvider),
+      checkAuthStatusUseCase: ref.read(checkAuthStatusUseCaseProvider),
+      getUserFromTokenUseCase: ref.read(getUserFromTokenUseCaseProvider),
+      registerUseCase: ref.read(registerUseCaseProvider),
+      createApiaryUseCase: ref.read(createApiaryUseCaseProvider),
+    );
+  },
+);
+```
+
+## Auto-Dispose Providers
+
+For temporary state (e.g., form controllers), use auto-dispose:
+
+```dart
+final loginControllerProvider =
+    StateNotifierProvider.autoDispose<LoginController, LoginState>((ref) {
+  final authController = ref.watch(authControllerProvider.notifier);
+  return LoginController(authController);
+});
+```
+
+<Note>
+Auto-dispose providers automatically dispose of their state when no longer in use, preventing memory leaks.
+</Note>
+
+## Provider Listening and Side Effects
+
+### Using ref.listen for Side Effects
+
+```dart
+class ApiaryListPage extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<ApiaryListPage> createState() => _ApiaryListPageState();
+}
+
+class _ApiaryListPageState extends ConsumerState<ApiaryListPage> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Listen to state changes for side effects
+    ref.listenManual(apiariesControllerProvider, (previous, next) {
+      if (next.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.errorMessage!)),
+        );
+      }
+      
+      if (next.successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.successMessage!)),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Widget build implementation
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Provider Scope">
+    - Use `Provider` for stateless dependencies (repositories, use cases)
+    - Use `StateNotifierProvider` for mutable state (controllers)
+    - Use `FutureProvider` or `StreamProvider` for async data
+  </Accordion>
+
+  <Accordion title="State Immutability">
+    - Always return new state instances in `copyWith()`
+    - Never mutate state directly
+    - Use `const` constructors where possible
+  </Accordion>
+
+  <Accordion title="Controller Responsibilities">
+    - Orchestrate use cases
+    - Manage loading/error states
+    - Transform domain failures to user-friendly messages
+    - Keep controllers thin - business logic belongs in use cases
+  </Accordion>
+
+  <Accordion title="Provider Dependencies">
+    - Declare dependencies explicitly via constructor injection
+    - Use `ref.read()` for one-time access
+    - Use `ref.watch()` for reactive dependencies
+  </Accordion>
+</AccordionGroup>
+
+## Testing State Management
+
+```dart
+void main() {
+  test('ApiariesController fetches apiaries successfully', () async {
+    final container = ProviderContainer(
+      overrides: [
+        getApiariesUseCaseProvider.overrideWithValue(mockGetApiariesUseCase),
+      ],
+    );
+
+    final controller = container.read(apiariesControllerProvider.notifier);
+    
+    await controller.fetchApiaries();
+    
+    final state = container.read(apiariesControllerProvider);
+    expect(state.isLoading, false);
+    expect(state.allApiaries.length, greaterThan(0));
+  });
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand the overall architecture
+  </Card>
+  <Card title="Routing" icon="route" href="/development/routing">
+    Learn about navigation patterns
+  </Card>
+</CardGroup>

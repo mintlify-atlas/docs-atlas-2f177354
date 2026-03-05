@@ -1,0 +1,444 @@
+---
+title: 'Error Handling'
+description: 'Failure classes and error handling patterns'
+---
+
+## Overview
+
+Softbee uses a Clean Architecture approach to error handling with custom `Failure` classes. All errors are converted to domain-specific failures that can be handled consistently across the application.
+
+**Source:** `lib/core/error/failures.dart`
+
+## Failure Base Class
+
+The abstract base class for all failures in the application.
+
+```dart
+abstract class Failure {
+  final String message;
+  
+  const Failure(this.message);
+}
+```
+
+<ParamField path="message" type="String" required>
+  Human-readable error message describing what went wrong
+</ParamField>
+
+## Failure Types
+
+### ServerFailure
+
+Represents errors that occur on the server side.
+
+```dart
+class ServerFailure extends Failure {
+  const ServerFailure(super.message);
+}
+```
+
+<ResponseField name="Use Cases" type="String">
+  - HTTP 5xx errors
+  - API returning error responses
+  - Malformed server responses
+  - Backend validation errors
+</ResponseField>
+
+**Example:**
+```dart
+if (response.statusCode >= 500) {
+  return Left(ServerFailure('Server error: ${response.statusMessage}'));
+}
+```
+
+### CacheFailure
+
+Represents errors related to local data storage and caching.
+
+```dart
+class CacheFailure extends Failure {
+  const CacheFailure(super.message);
+}
+```
+
+<ResponseField name="Use Cases" type="String">
+  - Failed to read from local storage
+  - Failed to write to local storage
+  - Cache data corruption
+  - SharedPreferences errors
+</ResponseField>
+
+**Example:**
+```dart
+try {
+  await prefs.setString('user_data', json);
+} catch (e) {
+  return Left(CacheFailure('Failed to cache user data'));
+}
+```
+
+### NetworkFailure
+
+Represents network connectivity and communication errors.
+
+```dart
+class NetworkFailure extends Failure {
+  const NetworkFailure(super.message);
+}
+```
+
+<ResponseField name="Use Cases" type="String">
+  - No internet connection
+  - Connection timeout
+  - Request timeout
+  - DNS resolution failures
+</ResponseField>
+
+**Example:**
+```dart
+if (error.type == DioExceptionType.connectionTimeout) {
+  return Left(NetworkFailure('Connection timeout. Please check your internet.'));
+}
+```
+
+### AuthFailure
+
+Represents authentication and authorization errors.
+
+```dart
+class AuthFailure extends Failure {
+  const AuthFailure(super.message);
+}
+```
+
+<ResponseField name="Use Cases" type="String">
+  - Invalid credentials
+  - Expired tokens
+  - Unauthorized access (401)
+  - Forbidden resources (403)
+  - Session expired
+</ResponseField>
+
+**Example:**
+```dart
+if (response.statusCode == 401) {
+  return Left(AuthFailure('Session expired. Please login again.'));
+}
+```
+
+### InvalidInputFailure
+
+Represents validation errors and invalid user input.
+
+```dart
+class InvalidInputFailure extends Failure {
+  const InvalidInputFailure(super.message);
+}
+```
+
+<ResponseField name="Use Cases" type="String">
+  - Form validation errors
+  - Invalid data format
+  - Missing required fields
+  - Data out of acceptable range
+</ResponseField>
+
+**Example:**
+```dart
+if (apiaryName.isEmpty) {
+  return Left(InvalidInputFailure('Apiary name cannot be empty'));
+}
+```
+
+## Usage with Either
+
+Failures are typically used with the `Either` type from the [dartz](https://pub.dev/packages/dartz) package:
+
+```dart
+import 'package:dartz/dartz.dart';
+import 'package:Softbee/core/error/failures.dart';
+
+Future<Either<Failure, List<Apiary>>> getApiaries() async {
+  try {
+    final response = await dio.get('/apiaries');
+    final apiaries = parseApiaries(response.data);
+    return Right(apiaries);  // Success
+  } on DioException catch (e) {
+    return Left(_handleDioError(e));  // Failure
+  } catch (e) {
+    return Left(ServerFailure('Unexpected error: $e'));
+  }
+}
+```
+
+## Error Mapping Patterns
+
+### Mapping Dio Errors to Failures
+
+```dart
+Failure _handleDioError(DioException error) {
+  switch (error.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.receiveTimeout:
+      return NetworkFailure('Connection timeout. Please try again.');
+      
+    case DioExceptionType.badResponse:
+      return _handleBadResponse(error.response);
+      
+    case DioExceptionType.connectionError:
+      return NetworkFailure('No internet connection.');
+      
+    case DioExceptionType.cancel:
+      return ServerFailure('Request was cancelled');
+      
+    default:
+      return ServerFailure('An unexpected error occurred');
+  }
+}
+
+Failure _handleBadResponse(Response? response) {
+  final statusCode = response?.statusCode;
+  final message = response?.data['message'] as String?;
+  
+  switch (statusCode) {
+    case 400:
+      return InvalidInputFailure(message ?? 'Invalid request');
+    case 401:
+      return AuthFailure(message ?? 'Unauthorized');
+    case 403:
+      return AuthFailure(message ?? 'Forbidden');
+    case 404:
+      return ServerFailure(message ?? 'Resource not found');
+    case 500:
+    case 502:
+    case 503:
+      return ServerFailure(message ?? 'Server error');
+    default:
+      return ServerFailure(message ?? 'Unknown error');
+  }
+}
+```
+
+### Mapping Cache Errors
+
+```dart
+Failure _handleCacheError(Exception error) {
+  if (error is FileSystemException) {
+    return CacheFailure('File system error: ${error.message}');
+  }
+  return CacheFailure('Failed to access local storage');
+}
+```
+
+## Repository Implementation Example
+
+```dart
+class ApiaryRepositoryImpl implements ApiaryRepository {
+  final Dio dio;
+  final SharedPreferences prefs;
+  
+  ApiaryRepositoryImpl(this.dio, this.prefs);
+  
+  @override
+  Future<Either<Failure, List<Apiary>>> getApiaries() async {
+    // Check cache first
+    try {
+      final cached = prefs.getString('apiaries_cache');
+      if (cached != null) {
+        final apiaries = parseApiaries(cached);
+        return Right(apiaries);
+      }
+    } catch (e) {
+      // Log but don't fail - try network instead
+      print('Cache read failed: $e');
+    }
+    
+    // Fetch from network
+    try {
+      final response = await dio.get('/apiaries');
+      final apiaries = parseApiaries(response.data);
+      
+      // Update cache
+      try {
+        await prefs.setString('apiaries_cache', response.data);
+      } catch (e) {
+        // Log but don't fail - data was fetched successfully
+        print('Cache write failed: $e');
+      }
+      
+      return Right(apiaries);
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      return Left(ServerFailure('Unexpected error: $e'));
+    }
+  }
+}
+```
+
+## UseCase Error Handling
+
+```dart
+class GetApiaries implements UseCase<List<Apiary>, NoParams> {
+  final ApiaryRepository repository;
+  
+  GetApiaries(this.repository);
+  
+  @override
+  Future<Either<Failure, List<Apiary>>> call(NoParams params) {
+    return repository.getApiaries();
+  }
+}
+```
+
+## Presentation Layer Error Handling
+
+### Displaying Errors to Users
+
+```dart
+final result = await ref.read(getApiariesProvider).call(NoParams());
+
+result.fold(
+  (failure) {
+    // Handle error
+    String errorMessage = _mapFailureToMessage(failure);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMessage)),
+    );
+  },
+  (apiaries) {
+    // Handle success
+    setState(() {
+      _apiaries = apiaries;
+    });
+  },
+);
+```
+
+### Mapping Failures to User Messages
+
+```dart
+String _mapFailureToMessage(Failure failure) {
+  if (failure is ServerFailure) {
+    return failure.message;
+  } else if (failure is NetworkFailure) {
+    return 'Please check your internet connection and try again.';
+  } else if (failure is AuthFailure) {
+    return 'Your session has expired. Please login again.';
+  } else if (failure is CacheFailure) {
+    return 'Failed to load cached data.';
+  } else if (failure is InvalidInputFailure) {
+    return failure.message;
+  }
+  return 'An unexpected error occurred. Please try again.';
+}
+```
+
+## State Management with Failures
+
+### Using with Riverpod AsyncValue
+
+```dart
+final apiariesProvider = FutureProvider<List<Apiary>>((ref) async {
+  final repository = ref.watch(apiaryRepositoryProvider);
+  final result = await repository.getApiaries();
+  
+  return result.fold(
+    (failure) => throw failure,  // Throw to trigger error state
+    (apiaries) => apiaries,
+  );
+});
+
+// In widget
+final apiariesAsync = ref.watch(apiariesProvider);
+
+apiariesAsync.when(
+  data: (apiaries) => ApiaryList(apiaries: apiaries),
+  loading: () => CircularProgressIndicator(),
+  error: (error, stack) {
+    if (error is Failure) {
+      return ErrorWidget(message: error.message);
+    }
+    return ErrorWidget(message: 'Unknown error');
+  },
+);
+```
+
+## Testing with Failures
+
+```dart
+test('should return ServerFailure when server returns 500', () async {
+  // Arrange
+  when(mockDio.get(any)).thenThrow(
+    DioException(
+      requestOptions: RequestOptions(path: '/apiaries'),
+      response: Response(
+        requestOptions: RequestOptions(path: '/apiaries'),
+        statusCode: 500,
+      ),
+    ),
+  );
+  
+  // Act
+  final result = await repository.getApiaries();
+  
+  // Assert
+  expect(result, isA<Left<ServerFailure, List<Apiary>>>());
+  result.fold(
+    (failure) => expect(failure.message, contains('Server error')),
+    (_) => fail('Should return failure'),
+  );
+});
+```
+
+## Best Practices
+
+### 1. Always Use Specific Failure Types
+
+```dart
+// Good
+return Left(AuthFailure('Invalid credentials'));
+
+// Bad
+return Left(Failure('Invalid credentials'));  // Can't instantiate abstract class
+```
+
+### 2. Provide Helpful Error Messages
+
+```dart
+// Good
+return Left(NetworkFailure(
+  'Unable to connect to server. Please check your internet connection.'
+));
+
+// Bad
+return Left(NetworkFailure('Error'));
+```
+
+### 3. Log Technical Details Separately
+
+```dart
+try {
+  // ...
+} catch (e, stackTrace) {
+  // Log for developers
+  debugPrint('API Error: $e');
+  debugPrint('Stack trace: $stackTrace');
+  
+  // Return user-friendly message
+  return Left(ServerFailure('Failed to load apiaries'));
+}
+```
+
+### 4. Handle Failures at Appropriate Layers
+
+- **Data Layer:** Convert exceptions to Failures
+- **Domain Layer:** Pass Failures through
+- **Presentation Layer:** Convert Failures to user messages
+
+## See Also
+
+- [Network](/api/core/network) - Dio client and network error handling
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Either and Functional Error Handling](https://pub.dev/packages/dartz)

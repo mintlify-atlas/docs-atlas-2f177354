@@ -1,0 +1,300 @@
+---
+title: 'Auth Use Cases'
+description: 'Business logic use cases for authentication operations'
+icon: 'bolt'
+---
+
+# Authentication Use Cases
+
+Use cases encapsulate the business logic for authentication operations following Clean Architecture principles. Each use case represents a single operation that can be performed by the application.
+
+## LoginUseCase
+
+Handles user login authentication.
+
+**Location:** `lib/feature/auth/core/usecase/login_usecase.dart:13`
+
+### Constructor
+
+<ParamField path="repository" type="AuthRepository" required>
+  The authentication repository implementation
+</ParamField>
+
+```dart
+LoginUseCase(AuthRepository repository);
+```
+
+### Parameters
+
+**LoginParams**
+
+<ParamField path="email" type="String" required>
+  User's email address
+</ParamField>
+
+<ParamField path="password" type="String" required>
+  User's password
+</ParamField>
+
+### Returns
+
+<ResponseField name="Either<Failure, String>" type="Future">
+  Returns a `Right` containing the authentication token on success, or a `Left` containing a `Failure` on error
+</ResponseField>
+
+### Usage Example
+
+```dart
+final loginUseCase = LoginUseCase(authRepository);
+
+final params = LoginParams('user@example.com', 'password123');
+final result = await loginUseCase.call(params);
+
+result.fold(
+  (failure) => print('Login failed: ${failure.message}'),
+  (token) => print('Login successful, token: $token'),
+);
+```
+
+---
+
+## RegisterUseCase
+
+Handles new user registration.
+
+**Location:** `lib/feature/auth/core/usecase/register_usecase.dart:23`
+
+### Constructor
+
+<ParamField path="repository" type="AuthRepository" required>
+  The authentication repository implementation
+</ParamField>
+
+```dart
+RegisterUseCase(AuthRepository repository);
+```
+
+### Parameters
+
+**RegisterParams**
+
+<ParamField path="name" type="String" required>
+  User's display name (used for UI display or username generation)
+</ParamField>
+
+<ParamField path="username" type="String" required>
+  User's username
+</ParamField>
+
+<ParamField path="email" type="String" required>
+  User's email address
+</ParamField>
+
+<ParamField path="phone" type="String" required>
+  User's phone number
+</ParamField>
+
+<ParamField path="password" type="String" required>
+  User's password
+</ParamField>
+
+### Returns
+
+<ResponseField name="Either<Failure, Map<String, dynamic>>" type="Future">
+  Returns a `Right` containing registration response data on success, or a `Left` containing a `Failure` on error
+</ResponseField>
+
+### Usage Example
+
+```dart
+final registerUseCase = RegisterUseCase(authRepository);
+
+final params = RegisterParams(
+  name: 'John Doe',
+  username: 'johndoe',
+  email: 'john@example.com',
+  phone: '+1234567890',
+  password: 'securepass123',
+);
+
+final result = await registerUseCase.call(params);
+
+result.fold(
+  (failure) => print('Registration failed: ${failure.message}'),
+  (data) => print('Registration successful: $data'),
+);
+```
+
+---
+
+## LogoutUseCase
+
+Handles user logout and token cleanup.
+
+**Location:** `lib/feature/auth/core/usecase/logout_usecase.dart:6`
+
+### Constructor
+
+<ParamField path="repository" type="AuthRepository" required>
+  The authentication repository implementation
+</ParamField>
+
+```dart
+LogoutUseCase(AuthRepository repository);
+```
+
+### Parameters
+
+<ParamField path="params" type="NoParams" required>
+  No parameters required (use `NoParams()` instance)
+</ParamField>
+
+### Returns
+
+<ResponseField name="Either<Failure, void>" type="Future">
+  Returns a `Right` on successful logout, or a `Left` containing a `Failure` on error
+</ResponseField>
+
+### Usage Example
+
+```dart
+final logoutUseCase = LogoutUseCase(authRepository);
+
+final result = await logoutUseCase.call(NoParams());
+
+result.fold(
+  (failure) => print('Logout failed: ${failure.message}'),
+  (_) => print('Logout successful'),
+);
+```
+
+---
+
+## CheckAuthStatusUseCase
+
+Checks the current authentication status and retrieves the authenticated user.
+
+**Location:** `lib/feature/auth/core/usecase/check_auth_status_usecase.dart:8`
+
+### Constructor
+
+<ParamField path="repository" type="AuthRepository" required>
+  The authentication repository implementation
+</ParamField>
+
+```dart
+CheckAuthStatusUseCase(AuthRepository repository);
+```
+
+### Parameters
+
+<ParamField path="params" type="NoParams" required>
+  No parameters required (use `NoParams()` instance)
+</ParamField>
+
+### Returns
+
+<ResponseField name="Either<Failure, User?>" type="Future">
+  Returns a `Right` containing the authenticated `User` (or `null` if not authenticated) on success, or a `Left` containing a `Failure` on error
+</ResponseField>
+
+### Usage Example
+
+```dart
+final checkAuthUseCase = CheckAuthStatusUseCase(authRepository);
+
+final result = await checkAuthUseCase.call(NoParams());
+
+result.fold(
+  (failure) => print('Auth check failed: ${failure.message}'),
+  (user) {
+    if (user != null) {
+      print('User is authenticated: ${user.email}');
+    } else {
+      print('User is not authenticated');
+    }
+  },
+);
+```
+
+---
+
+## GetUserFromTokenUseCase
+
+Retrieves user information from an authentication token.
+
+**Location:** `lib/feature/auth/core/usecase/get_user_from_token_usecase.dart:8`
+
+### Constructor
+
+<ParamField path="repository" type="AuthRepository" required>
+  The authentication repository implementation
+</ParamField>
+
+```dart
+GetUserFromTokenUseCase(AuthRepository repository);
+```
+
+### Parameters
+
+<ParamField path="token" type="String" required>
+  Authentication token
+</ParamField>
+
+### Returns
+
+<ResponseField name="Either<Failure, User>" type="Future">
+  Returns a `Right` containing the `User` associated with the token on success, or a `Left` containing a `Failure` on error
+</ResponseField>
+
+### Usage Example
+
+```dart
+final getUserUseCase = GetUserFromTokenUseCase(authRepository);
+
+final token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+final result = await getUserUseCase.call(token);
+
+result.fold(
+  (failure) => print('Failed to get user: ${failure.message}'),
+  (user) => print('User retrieved: ${user.email}'),
+);
+```
+
+---
+
+## UseCase Base Class
+
+All use cases implement the `UseCase<Type, Params>` interface.
+
+**Location:** `lib/core/usecase/usecase.dart:5`
+
+```dart
+abstract class UseCase<Type, Params> {
+  Future<Either<Failure, Type>> call(Params params);
+}
+
+class NoParams {}
+```
+
+### Type Parameters
+
+<ParamField path="Type" type="Generic">
+  The return type of the use case operation
+</ParamField>
+
+<ParamField path="Params" type="Generic">
+  The parameters type required by the use case
+</ParamField>
+
+## Error Handling
+
+All use cases return `Either<Failure, T>` which allows for functional error handling:
+
+- **Right**: Contains the successful result
+- **Left**: Contains a `Failure` object with error information
+
+Common failure types:
+- `ServerFailure`: Server-side errors
+- `AuthFailure`: Authentication-specific errors
+- `NetworkFailure`: Network connectivity issues

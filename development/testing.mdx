@@ -1,0 +1,673 @@
+---
+title: 'Testing'
+description: 'Testing strategies for Clean Architecture Flutter apps'
+icon: 'vial'
+---
+
+## Overview
+
+Testing in Softbee follows Clean Architecture principles, with distinct testing strategies for each layer. The project uses Flutter's built-in testing framework along with popular mocking libraries.
+
+## Testing Dependencies
+
+Add these dependencies to your `pubspec.yaml`:
+
+```yaml pubspec.yaml
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.0           # Mocking library
+  integration_test:
+    sdk: flutter              # Integration tests
+```
+
+## Test Structure
+
+Organize tests to mirror the source code structure:
+
+```
+test/
+├── unit/
+│   ├── domain/
+│   │   ├── entities/
+│   │   └── usecases/
+│   ├── data/
+│   │   ├── datasources/
+│   │   └── repositories/
+│   └── presentation/
+│       └── controllers/
+├── widget/
+│   └── pages/
+└── integration/
+    └── app_test.dart
+```
+
+## Unit Testing
+
+### Testing Domain Entities
+
+```dart test/unit/domain/entities/apiary_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:Softbee/feature/apiaries/domain/entities/apiary.dart';
+
+void main() {
+  group('Apiary Entity', () {
+    test('fromJson creates valid Apiary object', () {
+      // Arrange
+      final json = {
+        'id': '123',
+        'user_id': 'user456',
+        'name': 'Test Apiary',
+        'location': 'Test Location',
+        'beehives_count': 10,
+        'treatments': true,
+      };
+
+      // Act
+      final apiary = Apiary.fromJson(json);
+
+      // Assert
+      expect(apiary.id, '123');
+      expect(apiary.userId, 'user456');
+      expect(apiary.name, 'Test Apiary');
+      expect(apiary.location, 'Test Location');
+      expect(apiary.beehivesCount, 10);
+      expect(apiary.treatments, true);
+    });
+
+    test('toJson returns correct map', () {
+      // Arrange
+      final apiary = Apiary(
+        id: '123',
+        userId: 'user456',
+        name: 'Test Apiary',
+        location: 'Test Location',
+        beehivesCount: 10,
+        treatments: true,
+      );
+
+      // Act
+      final json = apiary.toJson();
+
+      // Assert
+      expect(json['id'], '123');
+      expect(json['user_id'], 'user456');
+      expect(json['name'], 'Test Apiary');
+    });
+
+    test('copyWith creates new instance with updated values', () {
+      // Arrange
+      final apiary = Apiary(
+        id: '123',
+        userId: 'user456',
+        name: 'Test Apiary',
+        treatments: false,
+      );
+
+      // Act
+      final updatedApiary = apiary.copyWith(name: 'Updated Apiary');
+
+      // Assert
+      expect(updatedApiary.id, '123');
+      expect(updatedApiary.name, 'Updated Apiary');
+      expect(apiary.name, 'Test Apiary'); // Original unchanged
+    });
+  });
+}
+```
+
+### Testing Use Cases
+
+```dart test/unit/domain/usecases/get_apiaries_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:either_dart/either.dart';
+import 'package:Softbee/feature/apiaries/domain/usecases/get_apiaries.dart';
+import 'package:Softbee/feature/apiaries/domain/repositories/apiary_repository.dart';
+import 'package:Softbee/feature/apiaries/domain/entities/apiary.dart';
+import 'package:Softbee/core/usecase/usecase.dart';
+
+class MockApiaryRepository extends Mock implements ApiaryRepository {}
+
+void main() {
+  late GetApiariesUseCase useCase;
+  late MockApiaryRepository mockRepository;
+
+  setUp(() {
+    mockRepository = MockApiaryRepository();
+    useCase = GetApiariesUseCase(mockRepository);
+  });
+
+  group('GetApiariesUseCase', () {
+    final tApiaries = [
+      Apiary(
+        id: '1',
+        userId: 'user1',
+        name: 'Apiary 1',
+        treatments: false,
+      ),
+      Apiary(
+        id: '2',
+        userId: 'user1',
+        name: 'Apiary 2',
+        treatments: true,
+      ),
+    ];
+
+    test('should return list of apiaries from repository', () async {
+      // Arrange
+      when(() => mockRepository.getApiaries(any()))
+          .thenAnswer((_) async => Right(tApiaries));
+
+      // Act
+      final result = await useCase(NoParams());
+
+      // Assert
+      expect(result.isRight, true);
+      result.fold(
+        (failure) => fail('Should return Right'),
+        (apiaries) {
+          expect(apiaries, tApiaries);
+          expect(apiaries.length, 2);
+        },
+      );
+      verify(() => mockRepository.getApiaries(any())).called(1);
+    });
+
+    test('should return failure when repository fails', () async {
+      // Arrange
+      when(() => mockRepository.getApiaries(any()))
+          .thenAnswer((_) async => Left(ServerFailure('Server error')));
+
+      // Act
+      final result = await useCase(NoParams());
+
+      // Assert
+      expect(result.isLeft, true);
+      result.fold(
+        (failure) => expect(failure, isA<ServerFailure>()),
+        (apiaries) => fail('Should return Left'),
+      );
+    });
+  });
+}
+```
+
+### Testing Repositories
+
+```dart test/unit/data/repositories/apiary_repository_impl_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:dio/dio.dart';
+import 'package:Softbee/feature/apiaries/data/repositories/apiary_repository_impl.dart';
+import 'package:Softbee/feature/apiaries/data/datasources/apiary_remote_datasource.dart';
+
+class MockApiaryRemoteDataSource extends Mock 
+    implements ApiaryRemoteDataSource {}
+
+class MockAuthLocalDataSource extends Mock 
+    implements AuthLocalDataSource {}
+
+void main() {
+  late ApiaryRepositoryImpl repository;
+  late MockApiaryRemoteDataSource mockRemoteDataSource;
+  late MockAuthLocalDataSource mockLocalDataSource;
+
+  setUp(() {
+    mockRemoteDataSource = MockApiaryRemoteDataSource();
+    mockLocalDataSource = MockAuthLocalDataSource();
+    repository = ApiaryRepositoryImpl(
+      remoteDataSource: mockRemoteDataSource,
+      localDataSource: mockLocalDataSource,
+    );
+  });
+
+  group('getApiaries', () {
+    final tToken = 'test-token';
+    final tApiaries = [
+      Apiary(id: '1', userId: 'user1', name: 'Apiary 1', treatments: false),
+    ];
+
+    test('should return apiaries when remote data source succeeds', () async {
+      // Arrange
+      when(() => mockLocalDataSource.getToken())
+          .thenAnswer((_) async => tToken);
+      when(() => mockRemoteDataSource.getApiaries(tToken))
+          .thenAnswer((_) async => tApiaries);
+
+      // Act
+      final result = await repository.getApiaries(tToken);
+
+      // Assert
+      expect(result.isRight, true);
+      result.fold(
+        (failure) => fail('Should return Right'),
+        (apiaries) => expect(apiaries, tApiaries),
+      );
+      verify(() => mockRemoteDataSource.getApiaries(tToken)).called(1);
+    });
+
+    test('should return NetworkFailure on DioException', () async {
+      // Arrange
+      when(() => mockLocalDataSource.getToken())
+          .thenAnswer((_) async => tToken);
+      when(() => mockRemoteDataSource.getApiaries(tToken))
+          .thenThrow(DioException(
+            requestOptions: RequestOptions(path: ''),
+            message: 'Network error',
+          ));
+
+      // Act
+      final result = await repository.getApiaries(tToken);
+
+      // Assert
+      expect(result.isLeft, true);
+      result.fold(
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (apiaries) => fail('Should return Left'),
+      );
+    });
+  });
+}
+```
+
+### Testing Controllers
+
+```dart test/unit/presentation/controllers/apiaries_controller_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:either_dart/either.dart';
+import 'package:Softbee/feature/apiaries/presentation/controllers/apiaries_controller.dart';
+import 'package:Softbee/feature/apiaries/domain/usecases/get_apiaries.dart';
+import 'package:Softbee/feature/apiaries/domain/entities/apiary.dart';
+
+class MockGetApiariesUseCase extends Mock implements GetApiariesUseCase {}
+class MockCreateApiaryUseCase extends Mock implements CreateApiaryUseCase {}
+class MockAuthController extends Mock implements AuthController {}
+
+void main() {
+  late ApiariesController controller;
+  late MockGetApiariesUseCase mockGetApiariesUseCase;
+  late MockCreateApiaryUseCase mockCreateApiaryUseCase;
+  late MockAuthController mockAuthController;
+
+  setUp(() {
+    mockGetApiariesUseCase = MockGetApiariesUseCase();
+    mockCreateApiaryUseCase = MockCreateApiaryUseCase();
+    mockAuthController = MockAuthController();
+
+    // Mock auth state
+    when(() => mockAuthController.state).thenReturn(
+      AuthState(
+        isAuthenticated: true,
+        user: User(id: 'user1', email: 'test@test.com'),
+        token: 'test-token',
+      ),
+    );
+
+    controller = ApiariesController(
+      getApiariesUseCase: mockGetApiariesUseCase,
+      createApiaryUseCase: mockCreateApiaryUseCase,
+      updateApiaryUseCase: mockUpdateApiaryUseCase,
+      deleteApiaryUseCase: mockDeleteApiaryUseCase,
+      authController: mockAuthController,
+    );
+  });
+
+  group('fetchApiaries', () {
+    final tApiaries = [
+      Apiary(id: '1', userId: 'user1', name: 'Apiary 1', treatments: false),
+      Apiary(id: '2', userId: 'user1', name: 'Apiary 2', treatments: true),
+    ];
+
+    test('should update state with apiaries on success', () async {
+      // Arrange
+      when(() => mockGetApiariesUseCase(any()))
+          .thenAnswer((_) async => Right(tApiaries));
+
+      // Act
+      await controller.fetchApiaries();
+
+      // Assert
+      expect(controller.state.isLoading, false);
+      expect(controller.state.allApiaries, tApiaries);
+      expect(controller.state.errorMessage, null);
+    });
+
+    test('should update state with error message on failure', () async {
+      // Arrange
+      when(() => mockGetApiariesUseCase(any()))
+          .thenAnswer((_) async => Left(ServerFailure('Server error')));
+
+      // Act
+      await controller.fetchApiaries();
+
+      // Assert
+      expect(controller.state.isLoading, false);
+      expect(controller.state.allApiaries, isEmpty);
+      expect(controller.state.errorMessage, isNotNull);
+    });
+
+    test('should filter user apiaries correctly', () async {
+      // Arrange
+      final allApiaries = [
+        Apiary(id: '1', userId: 'user1', name: 'User 1 Apiary', treatments: false),
+        Apiary(id: '2', userId: 'user2', name: 'User 2 Apiary', treatments: false),
+      ];
+      
+      when(() => mockGetApiariesUseCase(any()))
+          .thenAnswer((_) async => Right(allApiaries));
+
+      // Act
+      await controller.fetchApiaries();
+
+      // Assert
+      expect(controller.state.allApiaries.length, 1);
+      expect(controller.state.allApiaries[0].userId, 'user1');
+    });
+  });
+
+  group('applyFilter', () {
+    setUp(() async {
+      final tApiaries = [
+        Apiary(id: '1', userId: 'user1', name: 'Mountain Apiary', treatments: false),
+        Apiary(id: '2', userId: 'user1', name: 'Valley Apiary', treatments: false),
+      ];
+      
+      when(() => mockGetApiariesUseCase(any()))
+          .thenAnswer((_) async => Right(tApiaries));
+      
+      await controller.fetchApiaries();
+    });
+
+    test('should filter apiaries by search query', () {
+      // Act
+      controller.applyFilter('mountain');
+
+      // Assert
+      expect(controller.state.filteredApiaries.length, 1);
+      expect(controller.state.filteredApiaries[0].name, 'Mountain Apiary');
+      expect(controller.state.searchQuery, 'mountain');
+    });
+
+    test('should return all apiaries when query is empty', () {
+      // Act
+      controller.applyFilter('');
+
+      // Assert
+      expect(controller.state.filteredApiaries.length, 2);
+    });
+  });
+}
+```
+
+## Widget Testing
+
+```dart test/widget/pages/apiary_list_page_test.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:Softbee/feature/apiaries/presentation/pages/apiary_list_page.dart';
+import 'package:Softbee/feature/apiaries/presentation/providers/apiary_providers.dart';
+
+class MockApiariesController extends StateNotifier<ApiariesState>
+    with Mock 
+    implements ApiariesController {
+  MockApiariesController() : super(const ApiariesState());
+}
+
+void main() {
+  testWidgets('displays loading indicator when loading', (tester) async {
+    // Arrange
+    final mockController = MockApiariesController();
+    mockController.state = const ApiariesState(isLoading: true);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiariesControllerProvider.overrideWith((ref) => mockController),
+        ],
+        child: const MaterialApp(home: ApiaryListPage()),
+      ),
+    );
+
+    // Assert
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('displays apiaries list when loaded', (tester) async {
+    // Arrange
+    final mockController = MockApiariesController();
+    final testApiaries = [
+      Apiary(id: '1', userId: 'user1', name: 'Test Apiary', treatments: false),
+    ];
+    mockController.state = ApiariesState(
+      isLoading: false,
+      allApiaries: testApiaries,
+      filteredApiaries: testApiaries,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiariesControllerProvider.overrideWith((ref) => mockController),
+        ],
+        child: const MaterialApp(home: ApiaryListPage()),
+      ),
+    );
+
+    // Assert
+    expect(find.text('Test Apiary'), findsOneWidget);
+    expect(find.byType(ApiaryCard), findsOneWidget);
+  });
+
+  testWidgets('displays error message when error occurs', (tester) async {
+    // Arrange
+    final mockController = MockApiariesController();
+    mockController.state = const ApiariesState(
+      isLoading: false,
+      errorMessage: 'Failed to load apiaries',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiariesControllerProvider.overrideWith((ref) => mockController),
+        ],
+        child: const MaterialApp(home: ApiaryListPage()),
+      ),
+    );
+
+    // Assert
+    expect(find.text('Failed to load apiaries'), findsOneWidget);
+  });
+}
+```
+
+## Testing with Riverpod
+
+### Using ProviderContainer
+
+```dart
+test('provider returns correct value', () {
+  final container = ProviderContainer(
+    overrides: [
+      dioClientProvider.overrideWithValue(mockDio),
+    ],
+  );
+
+  final repository = container.read(apiaryRepositoryProvider);
+  
+  expect(repository, isA<ApiaryRepositoryImpl>());
+  
+  container.dispose();
+});
+```
+
+### Provider Override Pattern
+
+```dart
+testWidgets('test with provider overrides', (tester) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        apiaryRepositoryProvider.overrideWithValue(mockRepository),
+        authControllerProvider.overrideWith((ref) => mockAuthController),
+      ],
+      child: const MaterialApp(home: MyPage()),
+    ),
+  );
+  
+  // Test assertions
+});
+```
+
+## Integration Testing
+
+```dart integration_test/app_test.dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:Softbee/main.dart' as app;
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  group('App Integration Tests', () {
+    testWidgets('login flow works correctly', (tester) async {
+      // Start app
+      app.main();
+      await tester.pumpAndSettle();
+
+      // Find and tap login button
+      expect(find.text('Login'), findsOneWidget);
+      
+      // Enter credentials
+      await tester.enterText(
+        find.byKey(const Key('email_field')),
+        'test@example.com',
+      );
+      await tester.enterText(
+        find.byKey(const Key('password_field')),
+        'password123',
+      );
+      
+      // Submit login
+      await tester.tap(find.byKey(const Key('login_button')));
+      await tester.pumpAndSettle();
+
+      // Verify navigation to dashboard
+      expect(find.text('Dashboard'), findsOneWidget);
+    });
+  });
+}
+```
+
+## Testing Best Practices
+
+<AccordionGroup>
+  <Accordion title="Arrange-Act-Assert Pattern">
+    Follow the AAA pattern for clear test structure:
+    ```dart
+    test('description', () {
+      // Arrange - Set up test data and mocks
+      final testData = 'test';
+      
+      // Act - Execute the code under test
+      final result = functionUnderTest(testData);
+      
+      // Assert - Verify the results
+      expect(result, expectedValue);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Mock External Dependencies">
+    Use Mocktail to mock repositories, data sources, and controllers:
+    ```dart
+    class MockRepository extends Mock implements Repository {}
+    ```
+  </Accordion>
+
+  <Accordion title="Test One Thing at a Time">
+    Each test should verify a single behavior or scenario.
+  </Accordion>
+
+  <Accordion title="Use Descriptive Test Names">
+    Test names should clearly describe what is being tested:
+    ```dart
+    test('should return ServerFailure when API returns 500', () {});
+    ```
+  </Accordion>
+
+  <Accordion title="Test Edge Cases">
+    Test error conditions, null values, empty lists, and boundary conditions.
+  </Accordion>
+</AccordionGroup>
+
+## Running Tests
+
+```bash
+# Run all unit tests
+flutter test
+
+# Run specific test file
+flutter test test/unit/domain/usecases/get_apiaries_test.dart
+
+# Run tests with coverage
+flutter test --coverage
+
+# Run integration tests
+flutter test integration_test/app_test.dart
+
+# Run widget tests only
+flutter test test/widget
+```
+
+## Code Coverage
+
+Generate and view coverage reports:
+
+```bash
+# Generate coverage
+flutter test --coverage
+
+# View coverage (requires lcov)
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html
+```
+
+<Note>
+Aim for at least 80% code coverage in domain and data layers. Presentation layer coverage can be lower due to UI complexity.
+</Note>
+
+## Continuous Integration
+
+```yaml .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+      - run: flutter pub get
+      - run: flutter test --coverage
+      - run: flutter test integration_test/
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Understand where to place test files
+  </Card>
+  <Card title="State Management" icon="arrows-rotate" href="/development/state-management">
+    Learn how to test Riverpod providers
+  </Card>
+</CardGroup>

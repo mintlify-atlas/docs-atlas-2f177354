@@ -1,0 +1,359 @@
+---
+title: 'Managing Beehives'
+description: 'Track individual beehive health, population, and status'
+icon: 'hive'
+---
+
+## Overview
+
+Beehives are the individual colonies within your apiaries. Softbee allows you to track detailed information about each beehive, including population levels, health status, frame counts, and observations.
+
+## Accessing Beehive Management
+
+<Steps>
+  <Step title="Select an Apiary">
+    From the main dashboard, select the apiary where you want to manage beehives.
+  </Step>
+
+  <Step title="Navigate to Monitoring">
+    In the apiary dashboard, tap **"Monitoreo"** (Monitoring).
+  </Step>
+
+  <Step title="Open Beehive Management">
+    Select the **"Colmena"** (Beehive) card to access beehive management.
+  </Step>
+</Steps>
+
+## Creating a New Beehive
+
+<Steps>
+  <Step title="Open the Beehive Creation Dialog">
+    In the beehive management page, tap the **"Add New Beehive"** button or `+` icon.
+    
+    You'll see a dialog titled **"Crear Nueva Colmena"** (Create New Beehive).
+  </Step>
+
+  <Step title="Enter Beehive Number">
+    **Field**: `hive_number` / `beehive_number` (Required)
+    
+    Assign a unique number to identify this beehive:
+    - Must be a valid integer
+    - Example: 101, 102, 15, etc.
+    - Must be unique within the apiary
+    
+    <Warning>
+      Each beehive number must be unique within an apiary. The app will show an error if you try to create a beehive with a duplicate number.
+    </Warning>
+  </Step>
+
+  <Step title="Set Activity Level">
+    **Field**: `activity_level` (Optional)
+    
+    Select the current activity level of the beehive:
+    - **Alta** (High)
+    - **Media** (Medium)
+    - **Baja** (Low)
+    
+    This helps you track which hives are most active.
+  </Step>
+
+  <Step title="Record Bee Population">
+    **Field**: `bee_population` (Optional)
+    
+    Estimate the bee population size:
+    - **Alta** (High)
+    - **Media** (Medium)
+    - **Baja** (Low)
+    
+    <Tip>
+      Regular population tracking helps you identify when a colony is thriving or declining.
+    </Tip>
+  </Step>
+
+  <Step title="Count Frames">
+    **Food Frames** (`food_frames`) (Optional):
+    - Number of frames dedicated to food/honey storage
+    - Must be a valid number
+    - Example: 5
+    
+    **Brood Frames** (`brood_frames`) (Optional):
+    - Number of frames containing brood (eggs, larvae, pupae)
+    - Must be a valid number
+    - Example: 3
+    
+    These metrics help you understand the hive's production and reproduction capacity.
+  </Step>
+
+  <Step title="Set Hive Status">
+    **Field**: `hive_status` (Optional)
+    
+    Select the current configuration of the hive:
+    - **Cámara de cría y producción** (Brood and production chamber)
+    - **Cámara de cría y doble alza de producción** (Brood chamber and double production super)
+    - **Cámara de cría** (Brood chamber only)
+    - **Cámara de producción** (Production chamber only)
+  </Step>
+
+  <Step title="Record Health Status">
+    **Field**: `health_status` (Optional)
+    
+    Document any health issues:
+    - **Ninguno** (None)
+    - **Presencia barroa** (Varroa mite presence)
+    - **Presencia de plagas** (Pest presence)
+    - **Enfermedad** (Disease)
+    
+    <Note>
+      Tracking health status early helps you respond to problems before they become severe.
+    </Note>
+  </Step>
+
+  <Step title="Production Chamber">
+    **Field**: `has_production_chamber` (Optional)
+    
+    Indicate whether the hive has a production chamber:
+    - **Si** (Yes)
+    - **No** (No)
+  </Step>
+
+  <Step title="Add Observations">
+    **Field**: `observations` (Optional)
+    
+    Add any additional notes or observations about this beehive:
+    - Free-text field (up to 3 lines)
+    - Example: "La colmena se ve saludable" (The hive looks healthy)
+    - Use this for anything not captured in other fields
+  </Step>
+
+  <Step title="Save the Beehive">
+    Click **"Crear Colmena"** (Create Beehive) to save.
+    
+    The system will:
+    - Validate the beehive number is unique
+    - Validate all numeric fields
+    - Create the beehive record
+    - Update the apiary's beehive count
+    - Return you to the beehive list
+  </Step>
+</Steps>
+
+## Editing an Existing Beehive
+
+<Steps>
+  <Step title="Locate the Beehive">
+    Find the beehive you want to edit in the list or grid view.
+  </Step>
+
+  <Step title="Open the Edit Dialog">
+    Tap the **edit icon** on the beehive card.
+    
+    The dialog will show **"Editar Colmena"** (Edit Beehive) and be pre-filled with current data.
+  </Step>
+
+  <Step title="Update Information">
+    Modify any of the fields as needed. All fields follow the same rules as during creation.
+    
+    <Warning>
+      If you change the beehive number, ensure it doesn't conflict with another beehive in the same apiary.
+    </Warning>
+  </Step>
+
+  <Step title="Save Changes">
+    Click **"Guardar Cambios"** (Save Changes) to update the beehive.
+  </Step>
+</Steps>
+
+## Beehive Data Structure
+
+Each beehive stores the following information:
+
+| Field | Type | Description | Required |
+|-------|------|-------------|---------|
+| `id` | String | Unique identifier | Auto-generated |
+| `apiary_id` | String | ID of the parent apiary | Auto-set |
+| `hive_number` | Integer | Beehive identification number | Yes |
+| `activity_level` | String | Activity level (Alta/Media/Baja) | No |
+| `bee_population` | String | Population size (Alta/Media/Baja) | No |
+| `food_frames` | Integer | Number of food/honey frames | No |
+| `brood_frames` | Integer | Number of brood frames | No |
+| `hive_status` | String | Current hive configuration | No |
+| `health_status` | String | Health condition | No |
+| `has_production_chamber` | String | Has production chamber (Si/No) | No |
+| `observations` | String | Additional notes | No |
+| `created_at` | DateTime | Creation timestamp | Auto-set |
+| `updated_at` | DateTime | Last update timestamp | Auto-updated |
+
+## Understanding Beehive Metrics
+
+### Activity Level
+
+Activity level indicates how active the bees are at the hive entrance and within the colony:
+
+- **Alta (High)**: Lots of foraging activity, bees coming and going frequently
+- **Media (Medium)**: Moderate activity, normal operations
+- **Baja (Low)**: Little activity, may indicate problems or seasonal slowdown
+
+### Population Levels
+
+Population gives you a rough estimate of colony size:
+
+- **Alta (High)**: Strong colony, many bees covering most frames
+- **Media (Medium)**: Average colony size
+- **Baja (Low)**: Small colony, may need support or monitoring
+
+<Tip>
+  Comparing population levels over time helps you identify growth patterns or potential issues.
+</Tip>
+
+### Frame Counts
+
+**Food Frames**:
+- Frames with capped or uncapped honey
+- Frames with stored pollen
+- More food frames = better winter preparation
+
+**Brood Frames**:
+- Frames with eggs, larvae, or capped brood
+- More brood frames = active queen and colony growth
+- Fewer brood frames in fall is normal (seasonal reduction)
+
+### Health Status Categories
+
+<Accordion title="Ninguno (None)">
+  The hive appears healthy with no visible issues:
+  - No pests detected
+  - No disease symptoms
+  - Normal bee behavior
+</Accordion>
+
+<Accordion title="Presencia barroa (Varroa Presence)">
+  Varroa mites detected:
+  - Most common honeybee pest
+  - Can weaken colonies if untreated
+  - Monitor levels and consider treatment options
+</Accordion>
+
+<Accordion title="Presencia de plagas (Pest Presence)">
+  Other pests detected:
+  - Small hive beetles
+  - Wax moths
+  - Ants or other insects
+  - Rodents
+</Accordion>
+
+<Accordion title="Enfermedad (Disease)">
+  Disease symptoms observed:
+  - Foulbrood (American or European)
+  - Chalkbrood
+  - Nosema
+  - Other bacterial or fungal infections
+  
+  <Warning>
+    Some diseases are reportable to authorities. Check your local regulations.
+  </Warning>
+</Accordion>
+
+## Beehive Workflows
+
+### Workflow 1: Regular Inspection Updates
+
+<Steps>
+  <Step title="Open the beehive you're inspecting" />
+  <Step title="Update activity and population levels" />
+  <Step title="Count and update food and brood frames" />
+  <Step title="Record any health observations" />
+  <Step title="Add notes in the observations field" />
+  <Step title="Save the updated information" />
+</Steps>
+
+### Workflow 2: Seasonal Preparation
+
+<Steps>
+  <Step title="Review all beehives in the apiary" />
+  <Step title="Check food frame counts for winter readiness" />
+  <Step title="Verify health status of each colony" />
+  <Step title="Identify weak colonies that need support" />
+  <Step title="Plan interventions based on data" />
+</Steps>
+
+### Workflow 3: Adding Production Supers
+
+<Steps>
+  <Step title="Select the beehive receiving a super" />
+  <Step title="Update `hive_status` to include production chamber" />
+  <Step title="Set `has_production_chamber` to 'Si'" />
+  <Step title="Note the date in observations" />
+  <Step title="Monitor food frame counts in future inspections" />
+</Steps>
+
+## Validation and Error Handling
+
+### Common Errors
+
+<Accordion title="Error: 'Por favor, introduce el número de colmena'">
+  **Cause**: Beehive number field is empty.
+  
+  **Solution**: Enter a valid number for the beehive.
+</Accordion>
+
+<Accordion title="Error: 'Debe ser un número válido'">
+  **Cause**: You entered text instead of a number in a numeric field.
+  
+  **Solution**: Enter only digits in the beehive number, food frames, or brood frames fields.
+</Accordion>
+
+<Accordion title="Error: 'Ya existe una colmena con este número en el apiario'">
+  **Cause**: Another beehive in the same apiary already uses this number.
+  
+  **Solution**: Choose a different number that's unique within this apiary.
+</Accordion>
+
+## Best Practices
+
+<Tip>
+  **Consistent Numbering**: Use a numbering system that makes sense for your operation:
+  - Sequential: 1, 2, 3, 4...
+  - Location-based: Row 1: 101-110, Row 2: 201-210
+  - Descriptive: Use numbers that indicate apiary and position
+</Tip>
+
+<Tip>
+  **Regular Updates**: Update beehive data during each inspection to track trends over time. This historical data is invaluable for:
+  - Identifying productive queens
+  - Spotting problems early
+  - Planning interventions
+  - Year-over-year comparisons
+</Tip>
+
+<Tip>
+  **Use Observations Wisely**: The observations field is perfect for:
+  - Queen sightings
+  - Temperament notes
+  - Unusual behavior
+  - Dates of treatments or interventions
+  - Swarm preparations or splits
+</Tip>
+
+## Viewing Beehive Lists
+
+Beehives are displayed in:
+
+- **List view** (mobile/tablet): Scrollable list of beehive cards
+- **Grid view** (desktop): Multi-column grid for easier overview
+
+Each card shows:
+- Beehive number
+- Current status indicators
+- Activity and population levels
+- Health alerts (if any)
+- Quick action buttons (Edit/View)
+
+## Next Steps
+
+- [Record inspections](/guides/inspections) to document detailed hive checks
+- [Track inventory](/guides/inventory-tracking) to manage supplies for beehive maintenance
+- Review apiary-level statistics to identify trends across all hives
+
+<Note>
+  The `updated_at` timestamp is automatically set every time you edit a beehive, helping you track when each hive was last inspected.
+</Note>

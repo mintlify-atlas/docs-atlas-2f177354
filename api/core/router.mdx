@@ -1,0 +1,284 @@
+---
+title: 'Router'
+description: 'Application routing and navigation configuration'
+---
+
+## Overview
+
+The Softbee app uses [GoRouter](https://pub.dev/packages/go_router) for declarative routing with Flutter. The router is integrated with Riverpod for state management and includes authentication-aware navigation.
+
+**Source:** `lib/core/router/app_router.dart`
+
+## AppRouter Provider
+
+### appRouterProvider
+
+The main router provider that creates and configures the GoRouter instance.
+
+```dart
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final notifier = ref.watch(routerNotifierProvider);
+  return GoRouter(
+    refreshListenable: notifier,
+    initialLocation: kIsWeb ? AppRoutes.landingRoute : AppRoutes.loginRoute,
+    routes: [...],
+    redirect: (context, state) { ... },
+    errorBuilder: (context, state) => const NotFoundPage(),
+  );
+});
+```
+
+<ParamField path="refreshListenable" type="RouterNotifier">
+  Notifier that triggers router refresh when auth state changes
+</ParamField>
+
+<ParamField path="initialLocation" type="String">
+  Initial route based on platform detection (landing page for web, login for mobile)
+</ParamField>
+
+<ParamField path="redirect" type="Function">
+  Global redirect logic for authentication-based navigation guards
+</ParamField>
+
+<ParamField path="errorBuilder" type="Function">
+  Builder for 404/error pages (returns `NotFoundPage`)
+</ParamField>
+
+## RouterNotifier
+
+A `ChangeNotifier` that listens to authentication state changes and triggers router rebuilds.
+
+```dart
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+  
+  RouterNotifier(this._ref) {
+    _ref.listen<AuthState>(
+      authControllerProvider,
+      (_, __) => notifyListeners(),
+    );
+  }
+}
+```
+
+**Purpose:** Automatically refreshes routes when user logs in/out.
+
+## Route Definitions
+
+All route paths are defined in `lib/core/router/app_routes.dart`:
+
+### Main Routes
+
+<ResponseField name="landingRoute" type="String" default="/">
+  Landing page for web users
+</ResponseField>
+
+<ResponseField name="loginRoute" type="String" default="/login">
+  User login page
+</ResponseField>
+
+<ResponseField name="registerRoute" type="String" default="/register">
+  User registration page
+</ResponseField>
+
+<ResponseField name="dashboardRoute" type="String" default="/dashboard">
+  Main dashboard showing list of apiaries
+</ResponseField>
+
+<ResponseField name="userProfileRoute" type="String" default="/profile">
+  User profile management page
+</ResponseField>
+
+<ResponseField name="resetPasswordRoute" type="String" default="/reset-password/:token">
+  Password reset page with token parameter
+</ResponseField>
+
+### Apiary-Specific Routes
+
+<ResponseField name="apiaryDashboardRoute" type="String" default="/apiary-dashboard/:apiaryId">
+  Dashboard for a specific apiary
+</ResponseField>
+
+<ResponseField name="monitoringOverviewRoute" type="String" default="/apiary-dashboard/:apiaryId/monitoring">
+  Monitoring overview for an apiary
+</ResponseField>
+
+<ResponseField name="beehiveManagementRoute" type="String" default="/apiary-dashboard/:apiaryId/hives">
+  Beehive management page
+</ResponseField>
+
+<ResponseField name="questionsManagementRoute" type="String" default="/apiary-dashboard/:apiaryId/monitoring/questions">
+  Questions management for monitoring
+</ResponseField>
+
+<ResponseField name="inventoryRoute" type="String" default="/apiary-dashboard/:apiaryId/inventory">
+  Inventory management page
+</ResponseField>
+
+<ResponseField name="reportsRoute" type="String" default="/apiary-dashboard/:apiaryId/reports">
+  Reports page for an apiary
+</ResponseField>
+
+<ResponseField name="historyRoute" type="String" default="/apiary-dashboard/:apiaryId/history">
+  History page showing apiary activity
+</ResponseField>
+
+<ResponseField name="apiarySettingsRoute" type="String" default="/apiary-dashboard/:apiaryId/settings">
+  Settings page for an apiary
+</ResponseField>
+
+## Navigation Guards
+
+The router implements authentication-based navigation guards through the `redirect` callback:
+
+```dart
+redirect: (context, state) {
+  final authState = ref.read(authControllerProvider);
+  final isLoggedIn = authState.isAuthenticated;
+  final isAuthRoute = state.matchedLocation == AppRoutes.loginRoute ||
+                      state.matchedLocation == AppRoutes.registerRoute ||
+                      state.matchedLocation == '/forgot-password' ||
+                      state.matchedLocation.startsWith(
+                        AppRoutes.resetPasswordRoute.split(':')[0],
+                      );
+  final isLandingRoute = state.matchedLocation == AppRoutes.landingRoute;
+
+  // Don't redirect while checking auth status
+  if (authState.isAuthenticating) {
+    return null;
+  }
+
+  // Redirect to login if not authenticated and not on auth/landing route
+  if (!isLoggedIn && !isAuthRoute && !isLandingRoute) {
+    return AppRoutes.loginRoute;
+  }
+
+  // Redirect to dashboard if authenticated and on auth/landing route
+  if (isLoggedIn && (isAuthRoute || isLandingRoute)) {
+    return AppRoutes.dashboardRoute;
+  }
+
+  return null;
+}
+```
+
+### Redirect Logic
+
+1. **While authenticating:** No redirect (allows loading states)
+2. **Not logged in + protected route:** Redirect to login
+3. **Logged in + auth route:** Redirect to dashboard
+4. **Otherwise:** Allow navigation
+
+## Usage Examples
+
+### Navigate to a Route
+
+```dart
+// Navigate to dashboard
+context.go(AppRoutes.dashboardRoute);
+
+// Navigate to apiary dashboard with parameters
+context.go(
+  '/apiary-dashboard/abc123?apiaryName=My Apiary&apiaryLocation=California'
+);
+```
+
+### Using Named Routes
+
+```dart
+// Navigate to monitoring overview
+context.goNamed(
+  AppRoutes.monitoringOverviewRoute,
+  pathParameters: {'apiaryId': 'abc123'},
+  queryParameters: {
+    'apiaryName': 'My Apiary',
+    'apiaryLocation': 'California',
+  },
+);
+```
+
+### Accessing Route Parameters
+
+```dart
+builder: (context, state) {
+  // Path parameters
+  final apiaryId = state.pathParameters['apiaryId'] as String;
+  
+  // Query parameters
+  final apiaryName = state.uri.queryParameters['apiaryName'];
+  final apiaryLocation = state.uri.queryParameters['apiaryLocation'];
+  
+  return ApiaryDashboardMenu(
+    apiaryId: apiaryId,
+    apiaryName: apiaryName ?? 'Unknown Apiary',
+    apiaryLocation: apiaryLocation,
+  );
+}
+```
+
+## Nested Routes
+
+The apiary dashboard uses nested routes for sub-pages:
+
+```dart
+GoRoute(
+  path: AppRoutes.apiaryDashboardRoute,
+  builder: (context, state) => ApiaryDashboardMenu(...),
+  routes: [
+    GoRoute(
+      path: 'monitoring',
+      name: AppRoutes.monitoringOverviewRoute,
+      builder: (context, state) => MonitoringOverviewPage(...),
+      routes: [
+        GoRoute(
+          path: 'beehives',
+          name: AppRoutes.beehiveManagementRoute,
+          builder: (context, state) => ColmenasManagementScreen(...),
+        ),
+        GoRoute(
+          path: 'questions',
+          name: AppRoutes.questionsManagementRoute,
+          builder: (context, state) => QuestionsManagementScreen(...),
+        ),
+      ],
+    ),
+  ],
+),
+```
+
+## Platform Detection
+
+The router uses platform detection for initial routing:
+
+```dart
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+initialLocation: kIsWeb 
+    ? AppRoutes.landingRoute  // Web: Show landing page
+    : AppRoutes.loginRoute     // Mobile: Go to login
+```
+
+## Integration with Riverpod
+
+The router is consumed in `main.dart` through the provider:
+
+```dart
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      routerConfig: router,
+    );
+  }
+}
+```
+
+## See Also
+
+- [Auth Entities](/api/auth/entities) - Authentication entities and user models
+- [Error Handling](/api/core/error-handling) - 404 page and error handling

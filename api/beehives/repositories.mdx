@@ -1,0 +1,464 @@
+---
+title: 'Beehive Repository'
+description: 'Repository interface and implementation for beehive data access'
+---
+
+## Overview
+
+The Beehive repository layer follows Clean Architecture principles by defining an abstract interface in the domain layer and providing a concrete implementation in the data layer. This abstraction enables testability, flexibility, and separation of concerns.
+
+## BeehiveRepository Interface
+
+The abstract repository interface defines the contract for beehive data operations.
+
+### Interface Definition
+
+```dart
+abstract class BeehiveRepository {
+  Future<Either<Failure, List<Beehive>>> getBeehivesByApiary(String apiaryId);
+  
+  Future<Either<Failure, Beehive>> createBeehive(
+    String apiaryId,
+    int beehiveNumber,
+    String? activityLevel,
+    String? beePopulation,
+    int? foodFrames,
+    int? broodFrames,
+    String? hiveStatus,
+    String? healthStatus,
+    String? hasProductionChamber,
+    String? observations,
+  );
+  
+  Future<Either<Failure, Beehive>> updateBeehive(
+    String beehiveId,
+    String apiaryId,
+    int? beehiveNumber,
+    String? activityLevel,
+    String? beePopulation,
+    int? foodFrames,
+    int? broodFrames,
+    String? hiveStatus,
+    String? healthStatus,
+    String? hasProductionChamber,
+    String? observations,
+  );
+  
+  Future<Either<Failure, void>> deleteBeehive(
+    String beehiveId,
+    String apiaryId,
+  );
+}
+```
+
+### Methods
+
+#### getBeehivesByApiary
+
+Retrieves all beehives for a specific apiary.
+
+<ParamField path="apiaryId" type="String" required>
+  The ID of the apiary to fetch beehives for
+</ParamField>
+
+<ResponseField name="return" type="Future<Either<Failure, List<Beehive>>>">
+  Returns a list of beehives on success, or a failure on error
+</ResponseField>
+
+**Example:**
+
+```dart
+final result = await repository.getBeehivesByApiary('apiary_123');
+
+result.fold(
+  (failure) => print('Failed to fetch beehives: $failure'),
+  (beehives) => print('Retrieved ${beehives.length} beehives'),
+);
+```
+
+---
+
+#### createBeehive
+
+Creates a new beehive in the specified apiary.
+
+<ParamField path="apiaryId" type="String" required>
+  ID of the parent apiary
+</ParamField>
+
+<ParamField path="beehiveNumber" type="int" required>
+  Sequential number for the beehive
+</ParamField>
+
+<ParamField path="activityLevel" type="String?">
+  Activity level classification
+</ParamField>
+
+<ParamField path="beePopulation" type="String?">
+  Population size classification
+</ParamField>
+
+<ParamField path="foodFrames" type="int?">
+  Number of food frames
+</ParamField>
+
+<ParamField path="broodFrames" type="int?">
+  Number of brood frames
+</ParamField>
+
+<ParamField path="hiveStatus" type="String?">
+  Operational status of the hive
+</ParamField>
+
+<ParamField path="healthStatus" type="String?">
+  Health condition of the beehive
+</ParamField>
+
+<ParamField path="hasProductionChamber" type="String?">
+  Production chamber presence indicator
+</ParamField>
+
+<ParamField path="observations" type="String?">
+  Additional notes
+</ParamField>
+
+<ResponseField name="return" type="Future<Either<Failure, Beehive>>">
+  Returns the created beehive on success, or a failure on error
+</ResponseField>
+
+**Example:**
+
+```dart
+final result = await repository.createBeehive(
+  'apiary_123',
+  15,
+  'Alta',
+  'Media',
+  3,
+  7,
+  'Cámara de cría y producción',
+  'Ninguno',
+  'Si',
+  'New colony from recent split',
+);
+
+result.fold(
+  (failure) => print('Creation failed: $failure'),
+  (beehive) => print('Created beehive with ID: ${beehive.id}'),
+);
+```
+
+---
+
+#### updateBeehive
+
+Updates an existing beehive's information.
+
+<ParamField path="beehiveId" type="String" required>
+  ID of the beehive to update
+</ParamField>
+
+<ParamField path="apiaryId" type="String" required>
+  ID of the parent apiary (for authorization)
+</ParamField>
+
+<ParamField path="beehiveNumber" type="int?">
+  Updated beehive number
+</ParamField>
+
+<ParamField path="activityLevel" type="String?">
+  Updated activity level
+</ParamField>
+
+<ParamField path="beePopulation" type="String?">
+  Updated population classification
+</ParamField>
+
+<ParamField path="foodFrames" type="int?">
+  Updated food frames count
+</ParamField>
+
+<ParamField path="broodFrames" type="int?">
+  Updated brood frames count
+</ParamField>
+
+<ParamField path="hiveStatus" type="String?">
+  Updated hive status
+</ParamField>
+
+<ParamField path="healthStatus" type="String?">
+  Updated health status
+</ParamField>
+
+<ParamField path="hasProductionChamber" type="String?">
+  Updated production chamber status
+</ParamField>
+
+<ParamField path="observations" type="String?">
+  Updated observations
+</ParamField>
+
+<ResponseField name="return" type="Future<Either<Failure, Beehive>>">
+  Returns the updated beehive on success, or a failure on error
+</ResponseField>
+
+**Example:**
+
+```dart
+final result = await repository.updateBeehive(
+  'beehive_789',
+  'apiary_123',
+  null,  // Keep current beehive number
+  'Media',  // Changed activity level
+  null,  // Keep current population
+  5,  // Updated food frames
+  null,  // Keep current brood frames
+  null,  // Keep current hive status
+  'Presencia barroa',  // Updated health status
+  null,  // Keep production chamber status
+  'Treatment started for varroa',  // Updated observations
+);
+
+result.fold(
+  (failure) => print('Update failed: $failure'),
+  (beehive) => print('Successfully updated beehive'),
+);
+```
+
+---
+
+#### deleteBeehive
+
+Deletes a beehive from an apiary.
+
+<ParamField path="beehiveId" type="String" required>
+  ID of the beehive to delete
+</ParamField>
+
+<ParamField path="apiaryId" type="String" required>
+  ID of the parent apiary (required for backend authorization)
+</ParamField>
+
+<ResponseField name="return" type="Future<Either<Failure, void>>">
+  Returns void on success, or a failure on error
+</ResponseField>
+
+**Example:**
+
+```dart
+final result = await repository.deleteBeehive(
+  'beehive_789',
+  'apiary_123',
+);
+
+result.fold(
+  (failure) => print('Deletion failed: $failure'),
+  (_) => print('Beehive successfully deleted'),
+);
+```
+
+---
+
+## BeehiveRepositoryImpl
+
+The concrete implementation of the `BeehiveRepository` interface.
+
+### Implementation Details
+
+```dart
+class BeehiveRepositoryImpl implements BeehiveRepository {
+  final BeehiveRemoteDataSource remoteDataSource;
+  final AuthLocalDataSource localDataSource;
+
+  BeehiveRepositoryImpl({
+    required this.remoteDataSource,
+    required this.localDataSource,
+  });
+  
+  // Implementation methods...
+}
+```
+
+### Dependencies
+
+<ParamField path="remoteDataSource" type="BeehiveRemoteDataSource" required>
+  Handles HTTP communication with the backend API
+</ParamField>
+
+<ParamField path="localDataSource" type="AuthLocalDataSource" required>
+  Provides authentication tokens from local storage
+</ParamField>
+
+### Authentication Flow
+
+All repository methods follow this authentication pattern:
+
+```dart
+// 1. Retrieve authentication token
+final token = await localDataSource.getToken();
+if (token == null) {
+  return const Left(
+    AuthFailure('No se encontró el token de autenticación.'),
+  );
+}
+
+// 2. Call remote data source with token
+final result = await remoteDataSource.someMethod(params, token);
+
+// 3. Return result wrapped in Either
+return Right(result);
+```
+
+### Error Handling
+
+The implementation catches exceptions and converts them to appropriate `Failure` types:
+
+<Expandable title="Error Handling Pattern">
+
+```dart
+try {
+  final token = await localDataSource.getToken();
+  if (token == null) {
+    return const Left(
+      AuthFailure('No se encontró el token de autenticación.'),
+    );
+  }
+  
+  final result = await remoteDataSource.operation(params, token);
+  return Right(result);
+} catch (e) {
+  return Left(ServerFailure(e.toString()));
+}
+```
+
+**Common Failures:**
+
+- `AuthFailure`: Authentication token missing or invalid
+- `ServerFailure`: Network errors, server errors, or parsing failures
+
+</Expandable>
+
+### Complete Implementation Example
+
+<Expandable title="getBeehivesByApiary Implementation">
+
+```dart
+@override
+Future<Either<Failure, List<Beehive>>> getBeehivesByApiary(
+  String apiaryId,
+) async {
+  try {
+    final token = await localDataSource.getToken();
+    if (token == null) {
+      return const Left(
+        AuthFailure('No se encontró el token de autenticación.'),
+      );
+    }
+    final result = await remoteDataSource.getBeehivesByApiary(
+      apiaryId,
+      token,
+    );
+    return Right(result);
+  } catch (e) {
+    return Left(ServerFailure(e.toString()));
+  }
+}
+```
+
+</Expandable>
+
+## Dependency Injection Setup
+
+Example setup using Riverpod:
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Data source providers
+final beehiveRemoteDataSourceProvider = Provider<BeehiveRemoteDataSource>(
+  (ref) => BeehiveRemoteDataSource(ref.watch(httpClientProvider)),
+);
+
+final authLocalDataSourceProvider = Provider<AuthLocalDataSource>(
+  (ref) => AuthLocalDataSource(ref.watch(secureStorageProvider)),
+);
+
+// Repository provider
+final beehiveRepositoryProvider = Provider<BeehiveRepository>(
+  (ref) => BeehiveRepositoryImpl(
+    remoteDataSource: ref.watch(beehiveRemoteDataSourceProvider),
+    localDataSource: ref.watch(authLocalDataSourceProvider),
+  ),
+);
+```
+
+## Testing
+
+The repository abstraction enables easy unit testing:
+
+```dart
+import 'package:mockito/mockito.dart';
+import 'package:test/test.dart';
+
+class MockBeehiveRepository extends Mock implements BeehiveRepository {}
+
+void main() {
+  late MockBeehiveRepository mockRepository;
+  
+  setUp(() {
+    mockRepository = MockBeehiveRepository();
+  });
+  
+  test('should return list of beehives when call succeeds', () async {
+    // Arrange
+    final beehives = [Beehive(id: '1', apiaryId: 'apiary_123')];
+    when(mockRepository.getBeehivesByApiary('apiary_123'))
+        .thenAnswer((_) async => Right(beehives));
+    
+    // Act
+    final result = await mockRepository.getBeehivesByApiary('apiary_123');
+    
+    // Assert
+    expect(result.isRight, true);
+    expect(result.right, beehives);
+  });
+  
+  test('should return failure when authentication fails', () async {
+    // Arrange
+    when(mockRepository.getBeehivesByApiary('apiary_123'))
+        .thenAnswer((_) async => Left(AuthFailure('No token')));
+    
+    // Act
+    final result = await mockRepository.getBeehivesByApiary('apiary_123');
+    
+    // Assert
+    expect(result.isLeft, true);
+    expect(result.left, isA<AuthFailure>());
+  });
+}
+```
+
+## Architecture Benefits
+
+<Expandable title="Clean Architecture Advantages">
+
+### Abstraction Benefits
+
+1. **Testability**: Mock the repository interface for unit tests
+2. **Flexibility**: Swap implementations without changing business logic
+3. **Separation of Concerns**: Domain logic doesn't depend on data implementation
+4. **Dependency Inversion**: High-level modules don't depend on low-level details
+
+### Layer Separation
+
+- **Domain Layer** (`domain/repositories/`): Abstract interface
+- **Data Layer** (`data/repositories/`): Concrete implementation
+- **Use Cases**: Depend only on the abstract interface
+
+</Expandable>
+
+## Location
+
+Source files:
+- Interface: `/lib/feature/beehive/domain/repositories/beehive_repository.dart`
+- Implementation: `/lib/feature/beehive/data/repositories/beehive_repository_impl.dart`

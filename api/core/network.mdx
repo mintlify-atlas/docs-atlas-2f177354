@@ -1,0 +1,353 @@
+---
+title: 'Network'
+description: 'HTTP client configuration and network layer setup'
+---
+
+## Overview
+
+Softbee uses [Dio](https://pub.dev/packages/dio) as the HTTP client for API communication. The network layer is configured through Riverpod providers with platform-specific base URLs.
+
+**Source:** `lib/core/network/dio_client.dart`
+
+## DioClient Provider
+
+### dioClientProvider
+
+The main Dio client provider configured with base URL, timeouts, and headers.
+
+```dart
+final dioClientProvider = Provider<Dio>((ref) {
+  final baseUrl = kIsWeb
+      ? 'http://127.0.0.1:5000'
+      : (defaultTargetPlatform == TargetPlatform.android
+            ? 'http://10.0.2.2:5000'
+            : 'http://127.0.0.1:5000');
+
+  final BaseOptions options = BaseOptions(
+    baseUrl: baseUrl,
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+  );
+  
+  return Dio(options);
+});
+```
+
+## Configuration
+
+### Base URL Configuration
+
+The base URL is automatically determined based on the platform:
+
+<ResponseField name="Web" type="String" default="http://127.0.0.1:5000">
+  Uses localhost for web builds
+</ResponseField>
+
+<ResponseField name="Android" type="String" default="http://10.0.2.2:5000">
+  Uses 10.0.2.2 to access host machine's localhost from Android emulator
+</ResponseField>
+
+<ResponseField name="iOS" type="String" default="http://127.0.0.1:5000">
+  Uses localhost for iOS simulator
+</ResponseField>
+
+### BaseOptions Parameters
+
+<ParamField path="baseUrl" type="String" required>
+  Platform-specific API base URL
+</ParamField>
+
+<ParamField path="connectTimeout" type="Duration" default="10 seconds">
+  Maximum time to establish connection to the server
+</ParamField>
+
+<ParamField path="receiveTimeout" type="Duration" default="10 seconds">
+  Maximum time to wait for response after connection is established
+</ParamField>
+
+<ParamField path="headers" type="Map<String, dynamic>">
+  Default headers sent with every request:
+  - `Content-Type: application/json`
+  - `Accept: application/json`
+</ParamField>
+
+## Platform Detection
+
+The client uses Flutter's platform detection APIs:
+
+```dart
+import 'package:flutter/foundation.dart';
+
+final baseUrl = kIsWeb  // Check if running on web
+    ? 'http://127.0.0.1:5000'
+    : (defaultTargetPlatform == TargetPlatform.android
+          ? 'http://10.0.2.2:5000'    // Android emulator
+          : 'http://127.0.0.1:5000');  // iOS simulator
+```
+
+### Why Different URLs?
+
+<Expandable title="Android Emulator Networking">
+
+Android emulators run in a separate network namespace. The special IP address `10.0.2.2` is an alias to the host machine's `127.0.0.1` (localhost).
+
+**Without this:**
+- `127.0.0.1` would refer to the emulator itself
+- The app couldn't connect to the development server on the host machine
+
+**Network mapping:**
+- `10.0.2.2` → Host machine's localhost
+- `10.0.2.3` → First DNS server
+- `10.0.2.15` → Emulator's own IP
+
+</Expandable>
+
+## Usage Examples
+
+### Basic GET Request
+
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:Softbee/core/network/dio_client.dart';
+
+class ApiaryRepository {
+  final Dio _dio;
+  
+  ApiaryRepository(this._dio);
+  
+  Future<List<Apiary>> getApiaries() async {
+    try {
+      final response = await _dio.get('/apiaries');
+      return (response.data as List)
+          .map((json) => Apiary.fromJson(json))
+          .toList();
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+}
+
+// Provider for repository
+final apiaryRepositoryProvider = Provider<ApiaryRepository>((ref) {
+  final dio = ref.watch(dioClientProvider);
+  return ApiaryRepository(dio);
+});
+```
+
+### POST Request with Body
+
+```dart
+Future<Apiary> createApiary(Apiary apiary) async {
+  try {
+    final response = await _dio.post(
+      '/apiaries',
+      data: apiary.toJson(),
+    );
+    return Apiary.fromJson(response.data);
+  } on DioException catch (e) {
+    throw _handleError(e);
+  }
+}
+```
+
+### Authenticated Requests
+
+To add authentication tokens to requests, use interceptors:
+
+```dart
+final dioClientProvider = Provider<Dio>((ref) {
+  final baseUrl = /* platform detection */;
+  final options = BaseOptions(/* config */);
+  final dio = Dio(options);
+  
+  // Add auth interceptor
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        // Get token from auth provider
+        final token = ref.read(authTokenProvider);
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+    ),
+  );
+  
+  return dio;
+});
+```
+
+### Error Handling
+
+```dart
+Failure _handleError(DioException error) {
+  switch (error.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.receiveTimeout:
+      return NetworkFailure('Connection timeout. Please try again.');
+      
+    case DioExceptionType.badResponse:
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401) {
+        return AuthFailure('Unauthorized. Please login again.');
+      }
+      return ServerFailure(
+        error.response?.data['message'] ?? 'Server error occurred'
+      );
+      
+    case DioExceptionType.connectionError:
+      return NetworkFailure(
+        'No internet connection. Please check your network.'
+      );
+      
+    default:
+      return ServerFailure('An unexpected error occurred');
+  }
+}
+```
+
+## Advanced Configuration
+
+### Adding Logging Interceptor
+
+```dart
+import 'package:dio/dio.dart';
+
+final dioClientProvider = Provider<Dio>((ref) {
+  final dio = Dio(/* base options */);
+  
+  // Add logging in debug mode
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        error: true,
+      ),
+    );
+  }
+  
+  return dio;
+});
+```
+
+### Custom Headers per Request
+
+```dart
+final response = await dio.get(
+  '/apiaries',
+  options: Options(
+    headers: {
+      'X-Custom-Header': 'value',
+    },
+  ),
+);
+```
+
+### Multipart File Upload
+
+```dart
+Future<void> uploadImage(File imageFile) async {
+  final formData = FormData.fromMap({
+    'image': await MultipartFile.fromFile(
+      imageFile.path,
+      filename: 'apiary_image.jpg',
+    ),
+  });
+  
+  await _dio.post(
+    '/apiaries/upload',
+    data: formData,
+  );
+}
+```
+
+### Request Cancellation
+
+```dart
+final cancelToken = CancelToken();
+
+try {
+  final response = await dio.get(
+    '/apiaries',
+    cancelToken: cancelToken,
+  );
+} on DioException catch (e) {
+  if (CancelToken.isCancel(e)) {
+    print('Request cancelled');
+  }
+}
+
+// Cancel the request
+cancelToken.cancel('User cancelled');
+```
+
+## Best Practices
+
+### Repository Pattern
+
+Always wrap Dio calls in repository classes following Clean Architecture:
+
+```dart
+// Data layer - Repository implementation
+class ApiaryRepositoryImpl implements ApiaryRepository {
+  final Dio _dio;
+  
+  ApiaryRepositoryImpl(this._dio);
+  
+  @override
+  Future<Either<Failure, List<Apiary>>> getApiaries() async {
+    try {
+      final response = await _dio.get('/apiaries');
+      final apiaries = (response.data as List)
+          .map((json) => ApiaryModel.fromJson(json))
+          .toList();
+      return Right(apiaries);
+    } on DioException catch (e) {
+      return Left(_handleError(e));
+    }
+  }
+}
+```
+
+### Environment-Specific URLs
+
+For production, use environment variables:
+
+```dart
+final baseUrl = kIsWeb
+    ? const String.fromEnvironment('API_URL', defaultValue: 'http://127.0.0.1:5000')
+    : /* platform detection */;
+```
+
+### Retry Logic
+
+```dart
+final dio = Dio(options);
+
+dio.interceptors.add(
+  InterceptorsWrapper(
+    onError: (error, handler) async {
+      if (error.type == DioExceptionType.connectionTimeout) {
+        // Retry the request
+        final options = error.requestOptions;
+        final response = await dio.fetch(options);
+        return handler.resolve(response);
+      }
+      return handler.next(error);
+    },
+  ),
+);
+```
+
+## See Also
+
+- [Error Handling](/api/core/error-handling) - Failure classes for network errors
+- [Dio Documentation](https://pub.dev/packages/dio)
+- [Clean Architecture in Flutter](https://resocoder.com/2019/08/27/flutter-tdd-clean-architecture-course-1-explanation-project-structure/)

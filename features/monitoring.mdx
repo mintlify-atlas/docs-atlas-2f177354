@@ -1,0 +1,296 @@
+---
+title: 'Monitoring & Inspections'
+description: 'Track hive inspections, answer custom questions, and use voice assistance'
+icon: 'clipboard-check'
+---
+
+## Overview
+
+The Monitoring feature helps beekeepers conduct systematic hive inspections and track colony health over time. It includes customizable inspection questions, a voice assistant (Maya), and integration with hive management data.
+
+## What is Monitoring?
+
+Monitoring in Softbee refers to the systematic process of:
+
+- Conducting hive inspections
+- Answering standardized or custom questions about colony conditions
+- Recording observations and measurements
+- Using voice assistance for hands-free data entry
+- Generating reports based on inspection history
+
+## Monitoring Overview Page
+
+The monitoring hub provides three main pathways:
+
+<CardGroup cols={3}>
+  <Card title="Colmena" icon="diagram-project">
+    Access hive management and detailed hive information
+  </Card>
+  <Card title="Preguntas" icon="clipboard-question">
+    Create and manage custom inspection questions
+  </Card>
+  <Card title="Maya" icon="microphone">
+    Voice assistant for hands-free inspections (coming soon)
+  </Card>
+</CardGroup>
+
+**Implementation:** `lib/feature/monitoring/presentation/pages/monitoring_overview_page.dart`
+
+### Navigation
+
+From the monitoring overview, users can:
+
+- Navigate to beehive management for the selected apiary
+- Access the questions management interface
+- Launch the Maya voice assistant (future feature)
+
+**Routes:**
+- Colmena → `/apiaries/:id/beehives`
+- Preguntas → `/apiaries/:id/questions`
+- Maya → (placeholder)
+
+## Inspection Questions
+
+The questions system allows beekeepers to create standardized checklists for consistent inspections.
+
+### Question Entity
+
+Each question contains structured metadata:
+
+```dart
+class Pregunta {
+  final String id;
+  final String apiarioId;           // Scoped to specific apiary
+  final String texto;                // Question text
+  final String tipoRespuesta;        // Response type
+  final String? categoria;           // Optional category
+  final bool obligatoria;            // Required flag
+  final List<String>? opciones;      // Options for choice questions
+  final int? min;                    // Min value for numeric
+  final int? max;                    // Max value for numeric
+  final int orden;                   // Display order
+  final bool activa;                 // Active/inactive
+}
+```
+
+**Source:** `lib/feature/monitoring/domain/entities/question_model.dart`
+
+### Question Types
+
+Questions can have different response formats:
+
+1. **Texto (Text)**: Free-form text answers
+2. **Número (Number)**: Numeric values with optional min/max
+3. **Selección (Choice)**: Multiple choice from predefined options
+4. **Sí/No (Yes/No)**: Boolean questions
+5. **Fecha (Date)**: Date/time stamps
+
+### Creating Questions
+
+Beekeepers can create custom questions tailored to their management style.
+
+<Steps>
+  <Step title="Navigate to Questions">
+    From the monitoring overview, click "Preguntas" to open the questions management page.
+  </Step>
+  
+  <Step title="Add New Question">
+    Click the "Add Question" button to open the question creation form.
+  </Step>
+  
+  <Step title="Configure Question">
+    Provide:
+    - **Texto**: The question text (e.g., "¿Se observó la reina?")
+    - **Tipo de Respuesta**: Select the response type
+    - **Categoría**: Optional grouping (e.g., "Salud", "Producción")
+    - **Obligatoria**: Mark if answer is required
+    - **Opciones**: For choice questions, provide answer options
+    - **Orden**: Set the display order in the inspection checklist
+  </Step>
+  
+  <Step title="Save Question">
+    The question is saved and added to your apiary's inspection checklist.
+  </Step>
+</Steps>
+
+**Implementation:** `lib/feature/monitoring/presentation/pages/questions_management_page.dart`
+
+### Example Questions
+
+Common inspection questions might include:
+
+**Health Category:**
+- ¿Se observó la reina? (Yes/No)
+- Nivel de población de abejas (Alta/Media/Baja)
+- ¿Hay presencia de varroa? (Yes/No)
+- ¿Se detectaron enfermedades? (Text)
+
+**Production Category:**
+- Número de cuadros con miel (Number, 0-10)
+- ¿Se agregó alza de producción? (Yes/No)
+- Estimado de producción en kg (Number)
+
+**Management Category:**
+- ¿Se realizó tratamiento? (Yes/No)
+- Tipo de tratamiento aplicado (Text)
+- ¿Se alimentó la colonia? (Yes/No)
+
+### Question Categories
+
+Organize questions into logical groups:
+
+- **Salud (Health)**: Disease, pests, queen status
+- **Producción (Production)**: Honey, wax, pollen collection
+- **Población (Population)**: Bee numbers, brood pattern
+- **Manejo (Management)**: Treatments, feeding, equipment
+
+## Conducting Inspections
+
+While inspecting hives, beekeepers can:
+
+1. View the checklist of questions for the apiary
+2. Answer each question systematically
+3. Record observations and measurements
+4. Save the inspection record with timestamp
+
+<Info>
+  Consistent use of the same questions over time allows for trend analysis and data-driven decision making.
+</Info>
+
+## Maya Voice Assistant
+
+Maya is a planned voice assistant feature for hands-free inspections.
+
+### Planned Capabilities
+
+- **Voice-activated recording**: Speak answers during inspection
+- **Hands-free operation**: No need to handle phone with gloved hands
+- **Natural language processing**: Understand spoken answers
+- **Auto-transcription**: Convert speech to structured data
+
+<Note>
+  The Maya feature is currently in development. The monitoring overview includes a placeholder for future integration.
+</Note>
+
+**Implementation:** `lib/feature/monitoring/presentation/pages/monitoring_overview_page.dart:440-461`
+
+## Data Management
+
+### Question Repository
+
+Questions are managed through a dedicated repository:
+
+**Repository:** `lib/feature/monitoring/data/repositories/question_repository_impl.dart`
+
+**Data Source:** `lib/feature/monitoring/data/datasources/question_remote_datasource.dart`
+
+### State Management
+
+Monitoring state uses Riverpod providers:
+
+```dart
+final questionsControllerProvider = StateNotifierProvider<QuestionsController, QuestionsState>(...)
+```
+
+**Source:** `lib/feature/monitoring/presentation/providers/questions_controller.dart`
+
+## UI Components
+
+The monitoring feature includes custom widgets for inspection workflows.
+
+**Widgets:** `lib/feature/monitoring/presentation/widgets/monitoring_widgets.dart`
+
+Common components:
+- Question display cards
+- Answer input fields
+- Validation indicators
+- Progress tracking
+
+## Responsive Design
+
+The monitoring overview adapts to different screen sizes:
+
+- **Desktop (900px and above)**: 3-column grid layout
+- **Tablet/Mobile (900px and below)**: Vertical stacked cards
+
+**Implementation:** `lib/feature/monitoring/presentation/pages/monitoring_overview_page.dart:219-252`
+
+## Integration with Beehives
+
+Monitoring integrates closely with beehive management:
+
+- Inspection questions can reference specific hive attributes
+- Answers can automatically update hive records
+- Historical inspection data is linked to individual hives
+- Reports combine hive metrics with inspection answers
+
+See [Beehive Management](/features/beehives) for hive-specific details.
+
+## Best Practices
+
+<Tip>
+  Create a standard set of questions that you answer at every inspection. This consistency makes it easier to spot trends and anomalies.
+</Tip>
+
+- Use categories to organize questions logically
+- Mark critical questions as obligatory (required)
+- Set appropriate display order for inspection flow
+- Keep question text clear and concise
+- Use choice questions for standardized answers
+- Use numeric questions for measurable values
+- Deactivate (don't delete) seasonal questions you don't need year-round
+
+## Inspection Workflow
+
+A typical inspection session:
+
+<Steps>
+  <Step title="Navigate to Monitoring">
+    Select the apiary you want to inspect from the dashboard.
+  </Step>
+  
+  <Step title="Choose Inspection Method">
+    - Use "Colmena" for individual hive updates
+    - Use "Preguntas" for checklist-based inspection
+    - Use "Maya" for voice-guided inspection (coming soon)
+  </Step>
+  
+  <Step title="Answer Questions">
+    Work through the question checklist systematically, hive by hive.
+  </Step>
+  
+  <Step title="Save Inspection">
+    Save the completed inspection with timestamp and any photos or notes.
+  </Step>
+  
+  <Step title="Review Summary">
+    Check the summary for any red flags or items needing immediate attention.
+  </Step>
+</Steps>
+
+## Color Coding
+
+The monitoring UI uses color coding for quick visual reference:
+
+- **Yellow/Amber**: Default monitoring color theme
+- **Green**: Healthy status, positive indicators
+- **Blue**: Informational, Maya assistant
+- **Orange**: Attention needed
+- **Red**: Critical issues or warnings
+
+## Future Enhancements
+
+Planned improvements to monitoring:
+
+- **Photo attachments**: Add images to inspection records
+- **Weather integration**: Automatically log weather conditions
+- **Trend charts**: Visualize inspection data over time
+- **Alerts**: Notifications for concerning patterns
+- **Shared templates**: Import question sets from other beekeepers
+- **Maya voice assistant**: Full hands-free inspection support
+
+## Related Features
+
+- [Beehives](/features/beehives) - Manage individual hives
+- [Apiaries](/features/apiaries) - Organize locations
+- Reports (coming soon) - Generate inspection reports

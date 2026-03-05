@@ -1,80 +1,177 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get started with Softbee and manage your apiaries like a pro"
 ---
+
+## Welcome to Softbee
+
+Softbee is a comprehensive beekeeping management application built with Flutter and Clean Architecture. This guide will help you set up your account and create your first apiary with beehives in minutes.
+
+<Note>
+  Softbee allows you to manage multiple apiaries, track beehive health, monitor production, and maintain detailed records of your beekeeping operations.
+</Note>
 
 ## Get started in three steps
 
-Get your documentation site running locally and make your first customization.
+<Steps>
 
-### Step 1: Set up your local environment
+<Step title="Create your account">
+  
+Start by creating your Softbee account with your beekeeping information.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+1. Open the Softbee app on your device
+2. Tap **Crear una cuenta** (Create an account) on the login page
+3. Fill in your personal information:
+   - Full name
+   - Email address (e.g., `beekeeper@example.com`)
+   - Phone number (e.g., `300 123 4567`)
+   - Password (minimum 8 characters with uppercase, lowercase, number, and special character)
+   - Confirm password
 
-### Step 2: Deploy your changes
+<Tip>
+  Make sure your password meets all requirements shown on the registration form for maximum security.
+</Tip>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+</Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+<Step title="Add your first apiary">
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+After completing personal information, you'll set up your first apiary location.
 
-### Step 3: Go live
+1. On **Step 2: Información de Apiarios**, fill in the apiary details:
+   - **Apiary Name**: Give it a descriptive name (e.g., "Las Flores Apiary")
+   - **Exact Address**: Provide the precise location (e.g., "Cota, Vereda El Rosal - Finca La Esperanza")
+   - **Treatment Application**: Toggle whether you apply treatments when bees are sick
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```dart
+// Example apiary entity structure
+class Apiary {
+  final String id;
+  final String userId;
+  final String name;
+  final String? location;
+  final int? beehivesCount;
+  final bool treatments;
+  final DateTime? createdAt;
+}
+```
 
-## Next steps
+2. **(Optional)** Click **Agregar otro apiario** to add additional apiary locations
+3. Click **Registrarse** to complete registration
 
-Now that you have your docs running, explore these key features:
+<Warning>
+  Ensure the apiary address is accurate - this information helps you track and manage different locations effectively.
+</Warning>
+
+</Step>
+
+<Step title="Create your first beehive">
+
+Once logged in, navigate to your apiary dashboard and add beehives.
+
+1. From the main dashboard, select your apiary
+2. Navigate to the **Hives** section
+3. Click the **+** button to create a new beehive
+4. Fill in the beehive information:
+   - **Hive Number**: Unique identifier (required, e.g., `101`)
+   - **Activity Level**: Low, Medium, High, or Very High (optional)
+   - **Bee Population**: Low, Medium, High, or Very High (optional)
+   - **Food Frames**: Number of frames with food reserves (optional)
+   - **Brood Frames**: Number of frames with brood (optional)
+   - **Hive Status**: Active, Inactive, Under Review, or Abandoned (optional)
+   - **Health Status**: Healthy, Sick, Under Treatment, or Critical (optional)
+   - **Production Chamber**: Yes, No, or In Process (optional)
+   - **Observations**: Any additional notes (optional)
+
+```dart
+// Example beehive creation
+const Beehive(
+  id: '1',
+  apiaryId: 'apiary-123',
+  beehiveNumber: 101,
+  activityLevel: 'High',
+  beePopulation: 'Medium',
+  foodFrames: 5,
+  broodFrames: 3,
+  hiveStatus: 'Active',
+  healthStatus: 'Healthy',
+  hasProductionChamber: 'Yes',
+  observations: 'Strong colony, good honey production',
+);
+```
+
+5. Click **Crear Colmena** to save
+
+<Tip>
+  Start with essential information (hive number) and add detailed observations over time as you inspect your hives.
+</Tip>
+
+</Step>
+
+</Steps>
+
+## What's next?
+
+Now that you have your first apiary and beehive set up, explore these features:
 
 <CardGroup cols={2}>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
+<Card title="Manage Beehives" icon="hexagon-vertical-nft" href="/features/beehives">
+  Add beehives to your apiary, track health, and record inspection data.
 </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
+<Card title="Monitor Production" icon="chart-line" href="/features/monitoring">
+  View production metrics, health indicators, and performance trends.
 </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
+<Card title="Inventory Management" icon="warehouse" href="/features/inventory">
+  Track your beekeeping equipment, supplies, and honey production.
 </Card>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
+<Card title="Managing Apiaries" icon="map-location-dot" href="/guides/managing-apiaries">
+  Learn how to create and manage multiple apiary locations.
+</Card>
+
+<Card title="Monitor Production" icon="chart-line" href="/features/monitoring">
+  View production metrics, health indicators, and performance trends.
+</Card>
+
+<Card title="Inventory Management" icon="warehouse" href="/features/inventory">
+  Track your beekeeping equipment, supplies, and honey production.
+</Card>
+
+<Card title="View Monitoring" icon="chart-line" href="/features/monitoring">
+  Track inspections and health metrics for your beehives.
 </Card>
 
 </CardGroup>
 
+## Key features at a glance
+
+<AccordionGroup>
+
+<Accordion title="Multi-Apiary Management" icon="layer-group">
+  Manage multiple apiary locations from a single dashboard. Each apiary can have unlimited beehives with independent tracking.
+</Accordion>
+
+<Accordion title="Detailed Beehive Tracking" icon="clipboard-list">
+  Record comprehensive data for each hive including activity levels, population, food stores, brood status, health conditions, and production capabilities.
+</Accordion>
+
+<Accordion title="Clean Architecture" icon="sitemap">
+  Built with industry-standard Clean Architecture principles ensuring maintainability, testability, and scalability.
+</Accordion>
+
+<Accordion title="Offline-First Design" icon="wifi-slash">
+  Work seamlessly without internet connection. Data syncs automatically when you're back online.
+</Accordion>
+
+<Accordion title="Beautiful UI/UX" icon="palette">
+  Enjoy a professional interface with smooth animations (Lottie), custom theming, and responsive layouts for all devices.
+</Accordion>
+
+</AccordionGroup>
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Need help?** Check out our detailed [Installation Guide](/installation) for platform-specific setup instructions, or explore the [API Reference](/api/core/router) for development information.
 </Note>

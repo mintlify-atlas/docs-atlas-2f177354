@@ -1,0 +1,527 @@
+---
+title: 'Inventory Tracking'
+description: 'Manage beekeeping supplies, equipment, and materials'
+icon: 'boxes-stacked'
+---
+
+## Overview
+
+Softbee's inventory management system helps you track supplies and equipment for each apiary. Monitor stock levels, receive low-stock alerts, and maintain an organized inventory of beekeeping materials.
+
+## Accessing Inventory Management
+
+<Steps>
+  <Step title="Select Your Apiary">
+    From the main dashboard, choose the apiary whose inventory you want to manage.
+  </Step>
+
+  <Step title="Navigate to Inventory">
+    In the apiary dashboard, select **"Inventario"** (Inventory) or the inventory management option.
+  </Step>
+</Steps>
+
+## Understanding Inventory Items
+
+Each inventory item tracks:
+
+| Field | Database Name | Type | Description | Required |
+|-------|---------------|------|-------------|---------|
+| ID | `id` | String | Unique identifier | Auto-generated |
+| Item Name | `name` | String | Name of the supply/equipment | Yes |
+| Quantity | `quantity` | Integer | Current stock amount | Yes |
+| Unit | `unit` | String | Unit of measurement | Yes |
+| Apiary ID | `apiary_id` | String | Associated apiary | Auto-set |
+| Description | `description` | String | Additional details | No |
+| Minimum Stock | `minimum_stock` | Integer | Low stock threshold | No (default: 0) |
+| Created At | `created_at` | DateTime | When item was added | Auto-set |
+| Updated At | `updated_at` | DateTime | Last modification time | Auto-updated |
+
+## Units of Measurement
+
+Softbee supports multiple units to accommodate different types of supplies:
+
+- **Unidades** (Units) - Default for countable items
+- **Láminas** (Sheets/Foundation) - For wax foundation sheets
+- **Pares** (Pairs) - For gloves, etc.
+- **Kilogramos** (Kilograms) - For sugar, supplements
+- **Litros** (Liters) - For liquid supplies
+- **Metros** (Meters) - For materials by length
+- **Cajas** (Boxes) - For boxed supplies
+- **Gramos** (Grams) - For small quantities
+- **Mililitros** (Milliliters) - For small liquid quantities
+- **Docenas** (Dozens) - For bulk small items
+
+<Tip>
+  The system automatically normalizes common unit variations (e.g., "kg" → "Kilogramos", "unit" → "Unidades") for consistency.
+</Tip>
+
+## Adding Inventory Items
+
+<Steps>
+  <Step title="Open the Add Item Dialog">
+    In the Inventory Management page, click **"Agregar Nuevo Insumo"** (Add New Supply).
+  </Step>
+
+  <Step title="Enter Item Name">
+    **Field**: `name` (Required)
+    
+    Provide a descriptive name for the item:
+    - Example: "Traje de apicultor" (Beekeeper suit)
+    - Example: "Sugar for feeding"
+    - Example: "Foundation sheets"
+    
+    <Note>
+      Use clear, consistent names to avoid duplicate entries. Check existing inventory before adding new items.
+    </Note>
+  </Step>
+
+  <Step title="Enter Quantity">
+    **Field**: `quantity` (Required)
+    
+    Enter the current stock amount:
+    - Must be a valid integer
+    - Example: 5, 10, 25
+    
+    <Warning>
+      Quantities below 4 will trigger low-stock warnings in the interface.
+    </Warning>
+  </Step>
+
+  <Step title="Select Unit of Measurement">
+    **Field**: `unit` (Required)
+    
+    Choose the appropriate unit from the dropdown:
+    - Consider the most practical unit for tracking
+    - Be consistent across similar items
+    
+    Examples:
+    - Beekeeper suits → Unidades
+    - Wax foundation → Láminas
+    - Sugar → Kilogramos
+    - Essential oils → Mililitros
+  </Step>
+
+  <Step title="Add Description (Optional)">
+    **Field**: `description` (Optional)
+    
+    Provide additional details about the item:
+    - Brand or supplier information
+    - Storage location
+    - Usage notes
+    - Example: "Insumos de protección" (Protection supplies)
+  </Step>
+
+  <Step title="Save the Item">
+    Click **"Agregar"** (Add) to save the inventory item.
+    
+    The system will:
+    - Validate required fields
+    - Create the inventory record
+    - Update inventory summary statistics
+    - Return you to the inventory list
+  </Step>
+</Steps>
+
+## Editing Inventory Items
+
+<Steps>
+  <Step title="Locate the Item">
+    Find the inventory item in the list or use the search function.
+  </Step>
+
+  <Step title="Open Edit Dialog">
+    Click the **"Editar"** (Edit) button on the item card.
+    
+    The dialog will show **"Editar Insumo"** (Edit Supply) with current values pre-filled.
+  </Step>
+
+  <Step title="Update Information">
+    Modify any fields:
+    - **Name**: Correct spelling or update description
+    - **Quantity**: Adjust for current stock (after use or restocking)
+    - **Unit**: Change if originally set incorrectly
+    - **Description**: Add or update notes
+  </Step>
+
+  <Step title="Save Changes">
+    Click **"Actualizar"** (Update) to save changes.
+    
+    The `updated_at` timestamp is automatically set to the current time.
+  </Step>
+</Steps>
+
+## Deleting Inventory Items
+
+<Steps>
+  <Step title="Locate the Item">
+    Find the item you want to remove from inventory.
+  </Step>
+
+  <Step title="Click Delete">
+    Click the **"Eliminar"** (Delete) button.
+  </Step>
+
+  <Step title="Confirm Deletion">
+    A confirmation dialog will appear:
+    - **Warning**: "Esta acción no se puede deshacer" (This action cannot be undone)
+    - The item will be permanently removed
+  </Step>
+
+  <Step title="Confirm or Cancel">
+    - Click **"Eliminar"** to permanently delete
+    - Click **"Cancelar"** to abort
+  </Step>
+</Steps>
+
+<Warning>
+  Deleted inventory items cannot be recovered. Ensure you want to permanently remove the item before confirming.
+</Warning>
+
+## Searching Inventory
+
+The inventory page includes a search function:
+
+<Steps>
+  <Step title="Locate the Search Bar">
+    At the top of the inventory list, find the search field labeled **"Buscar insumo..."** (Search supply...).
+  </Step>
+
+  <Step title="Enter Search Terms">
+    Type any part of the item name:
+    - Search is case-insensitive
+    - Matches partial names
+    - Results update in real-time
+  </Step>
+
+  <Step title="View Results">
+    Only items matching your search term will be displayed.
+  </Step>
+
+  <Step title="Clear Search">
+    Delete the search text to view all items again.
+  </Step>
+</Steps>
+
+## Understanding Inventory Summaries
+
+The inventory page displays summary statistics:
+
+### Total Items
+**Field**: `total_items`
+
+Total number of different inventory items tracked (not quantity, but unique items).
+
+### Low Stock Items
+**Field**: `low_stock_items`
+
+Number of items with quantity below minimum stock threshold or below 4 units.
+
+<Note>
+  Low stock items are highlighted with:
+  - Red warning icons
+  - Red text
+  - Red background on cards
+</Note>
+
+### Total Quantity
+**Field**: `total_quantity`
+
+Sum of all quantities across all inventory items.
+
+### In Stock Items
+**Field**: `in_stock_items`
+
+Number of items with quantity greater than 0.
+
+## Low Stock Alerts
+
+Softbee automatically identifies low-stock items:
+
+### Alert Threshold
+
+Items are considered low stock when:
+- Quantity < 4 units, OR
+- Quantity < `minimum_stock` value (if set)
+
+### Visual Indicators
+
+**In the Item List**:
+- Card background changes to red gradient
+- Warning icon appears next to quantity
+- Quantity text displays in red
+
+**In Summary Panels**:
+- Low Stock widget shows count
+- Alert section lists affected items
+
+**On Desktop**:
+- Right panel shows "Alertas" (Alerts) section
+- Each low-stock item listed individually
+
+<Tip>
+  Regularly check the low stock alerts to ensure you have supplies ready before you need them during hive inspections or interventions.
+</Tip>
+
+## Responsive Design
+
+Inventory Management adapts to your screen size:
+
+### Mobile (< 600px)
+- Full-width list view
+- Search and add buttons stacked
+- Summary in header badge
+
+### Tablet (600-1400px)
+- Left sidebar with inventory summary
+- Main content area for list
+- Side-by-side layout
+
+### Desktop (> 1400px)
+- Left sidebar: Inventory summary
+- Center: Grid view (2 columns)
+- Right sidebar: Statistics and alerts
+- Maximum information density
+
+## Common Inventory Items
+
+Here are examples of typical beekeeping inventory items:
+
+### Protective Equipment
+- Traje de apicultor (Beekeeper suit) - Unidades
+- Guantes (Gloves) - Pares
+- Velo (Veil) - Unidades
+- Botas (Boots) - Pares
+
+### Hive Components
+- Cuadros (Frames) - Unidades
+- Láminas de cera (Foundation sheets) - Láminas
+- Alzas (Supers) - Unidades
+- Tapas (Covers) - Unidades
+- Pisos (Bottom boards) - Unidades
+
+### Treatments & Medications
+- Tiras anti-varroa (Varroa strips) - Unidades
+- Aceites esenciales (Essential oils) - Mililitros
+- Ácido fórmico (Formic acid) - Litros
+- Timol (Thymol) - Gramos
+
+### Feed & Supplements
+- Azúcar (Sugar) - Kilogramos
+- Jarabe preparado (Prepared syrup) - Litros
+- Tortas de polen (Pollen patties) - Unidades
+- Suplemento proteico (Protein supplement) - Kilogramos
+
+### Tools & Equipment
+- Ahumador (Smoker) - Unidades
+- Palanca (Hive tool) - Unidades
+- Cepillo para abejas (Bee brush) - Unidades
+- Extractora (Honey extractor) - Unidades
+
+## Best Practices
+
+<Accordion title="Regular Stock Updates">
+  Update inventory quantities regularly:
+  - After purchasing new supplies
+  - After using items during inspections
+  - Before the beekeeping season starts
+  - After the season ends
+  
+  This ensures accurate stock levels and timely reordering.
+</Accordion>
+
+<Accordion title="Consistent Naming">
+  Use consistent naming conventions:
+  - Decide on language (Spanish or English)
+  - Use singular or plural consistently
+  - Include brand names if you track specific brands
+  - Check for existing items before adding duplicates
+</Accordion>
+
+<Accordion title="Use Descriptions Effectively">
+  Add useful information in descriptions:
+  - Storage location: "Stored in shed, top shelf"
+  - Supplier: "From ABC Beekeeping Supply"
+  - Notes: "Order 2 weeks before needed"
+  - Expiration tracking: "Best before dates vary"
+</Accordion>
+
+<Accordion title="Set Minimum Stock Levels">
+  Although currently defaulted to 0, the `minimum_stock` field can be used for:
+  - Critical items you always need on hand
+  - Seasonal items to reorder in advance
+  - Frequently used supplies
+  
+  Items below minimum stock appear in alerts.
+</Accordion>
+
+<Accordion title="Organize by Category">
+  Consider using naming prefixes to group items:
+  - "PPE - Traje" (Personal Protective Equipment)
+  - "Meds - Varroa strips" (Medications)
+  - "Feed - Sugar" (Feeding supplies)
+  - "Tools - Smoker" (Tools)
+  
+  This makes searching and filtering easier.
+</Accordion>
+
+## Inventory Workflows
+
+### Workflow 1: Seasonal Preparation
+
+<Steps>
+  <Step title="Review Current Stock">
+    Before the season, review all inventory items.
+  </Step>
+
+  <Step title="Identify Low Stock">
+    Check the low stock alerts and summary.
+  </Step>
+
+  <Step title="Plan Purchases">
+    Create a shopping list based on low stock items and seasonal needs.
+  </Step>
+
+  <Step title="Update After Restocking">
+    After purchasing, update quantities for all restocked items.
+  </Step>
+</Steps>
+
+### Workflow 2: Post-Inspection Update
+
+<Steps>
+  <Step title="Note Items Used">
+    During or after inspection, note which supplies were used.
+  </Step>
+
+  <Step title="Update Quantities">
+    For each item used:
+    - Open the edit dialog
+    - Subtract the amount used from current quantity
+    - Save the updated quantity
+  </Step>
+
+  <Step title="Check for Low Stock">
+    Review alerts to see if any items need reordering.
+  </Step>
+</Steps>
+
+### Workflow 3: Annual Inventory Audit
+
+<Steps>
+  <Step title="Physical Count">
+    Physically count all items in storage.
+  </Step>
+
+  <Step title="Compare to System">
+    Compare physical counts to quantities in Softbee.
+  </Step>
+
+  <Step title="Update Discrepancies">
+    Correct any discrepancies found.
+  </Step>
+
+  <Step title="Remove Obsolete Items">
+    Delete items no longer in use or discontinued.
+  </Step>
+
+  <Step title="Add New Items">
+    Add any new inventory items not yet tracked.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="Error: 'Por favor ingresa un nombre'">
+  **Cause**: Item name field is empty.
+  
+  **Solution**: Enter a name for the inventory item before saving.
+</Accordion>
+
+<Accordion title="Error: 'Ingresa cantidad' or 'Número válido'">
+  **Cause**: Quantity field is empty or contains non-numeric characters.
+  
+  **Solution**: Enter a valid whole number for the quantity.
+</Accordion>
+
+<Accordion title="Item appears with wrong unit">
+  **Cause**: Unit was set incorrectly during creation or the backend sent a different unit format.
+  
+  **Solution**: 
+  - Edit the item
+  - Select the correct unit from the dropdown
+  - Save changes
+</Accordion>
+
+<Accordion title="Low stock alert for items with adequate stock">
+  **Cause**: Item quantity is below 4, which triggers the default alert threshold.
+  
+  **Solution**: 
+  - If the quantity is actually adequate for your needs, you can ignore the alert
+  - Consider increasing quantity if you want to avoid the alert
+  - Future feature: Set custom `minimum_stock` thresholds
+</Accordion>
+
+<Accordion title="Search not finding items">
+  **Cause**: Search only matches item names, not descriptions or other fields.
+  
+  **Solution**: 
+  - Search for keywords from the item name
+  - Check spelling
+  - Try partial words
+  - Clear search and browse manually
+</Accordion>
+
+## Data Organization Tips
+
+<Tip>
+  **Track Consumables Separately**: Keep separate entries for different sizes or types of the same item:
+  - "Sugar - 1kg bags"
+  - "Sugar - 25kg bags"
+  
+  This makes tracking usage patterns easier.
+</Tip>
+
+<Tip>
+  **Version Control for Equipment**: If you have multiple versions of the same equipment:
+  - "Smoker - Old model (2020)"
+  - "Smoker - New model (2025)"
+  
+  Helps when you need parts or replacements.
+</Tip>
+
+<Tip>
+  **Location Tracking**: Use the description field to note storage locations:
+  - "Barn, shelf 2"
+  - "Honey house, equipment room"
+  - "Truck, supply box"
+  
+  Especially useful if you have multiple storage locations.
+</Tip>
+
+## Integration with Other Features
+
+Inventory tracking integrates with:
+
+### Beehive Management
+- Track equipment assigned to specific hives
+- Record when treatments are applied (use inventory to track treatment quantities)
+
+### Inspections
+- Note supplies used during inspections in observations
+- Update inventory after applying treatments or interventions
+
+### Apiaries
+- Each apiary has its own separate inventory
+- Helps you know what supplies are available at each location
+- Prevents shortages when working at remote apiaries
+
+## Next Steps
+
+- [Record inspections](/guides/inspections) and note supplies used
+- [Update beehive records](/guides/managing-beehives) after applying treatments
+- Set up a regular inventory review schedule
+- Establish relationships with suppliers for easy reordering
+
+<Note>
+  The `updated_at` timestamp helps you track when items were last modified, which can be useful for identifying stale inventory data.
+</Note>

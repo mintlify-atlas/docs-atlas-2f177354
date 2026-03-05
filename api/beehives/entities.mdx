@@ -1,0 +1,317 @@
+---
+title: 'Beehive Entity'
+description: 'Core domain entity representing a beehive in the Softbee application'
+---
+
+## Overview
+
+The `Beehive` entity is the core domain model representing a beehive within an apiary. It extends `Equatable` for value comparison and contains all essential beehive information including health status, population metrics, and operational details.
+
+## Beehive Class
+
+The main entity class that represents a beehive in the domain layer.
+
+### Properties
+
+<ParamField path="id" type="String" required>
+  Unique identifier for the beehive
+</ParamField>
+
+<ParamField path="apiaryId" type="String" required>
+  Reference to the parent apiary where this beehive is located
+</ParamField>
+
+<ParamField path="beehiveNumber" type="int?">
+  Sequential number identifying the beehive within its apiary
+</ParamField>
+
+<ParamField path="activityLevel" type="String?">
+  Current activity level of the beehive. Possible values:
+  - `"Alta"` - High activity
+  - `"Media"` - Medium activity
+  - `"Baja"` - Low activity
+</ParamField>
+
+<ParamField path="beePopulation" type="String?">
+  Population size classification. Possible values:
+  - `"Alta"` - High population
+  - `"Media"` - Medium population
+  - `"Baja"` - Low population
+</ParamField>
+
+<ParamField path="foodFrames" type="int?">
+  Number of frames dedicated to food storage
+</ParamField>
+
+<ParamField path="broodFrames" type="int?">
+  Number of frames containing brood (eggs, larvae, and pupae)
+</ParamField>
+
+<ParamField path="hiveStatus" type="String?">
+  Current operational status of the hive. Possible values:
+  - `"Cámara de cría y producción"` - Brood and production chamber
+  - `"Cámara de cría y doble alza de producción"` - Brood chamber with double production super
+  - `"Cámara de cría"` - Brood chamber only
+  - `"Cámara de producción"` - Production chamber only
+</ParamField>
+
+<ParamField path="healthStatus" type="String?">
+  Health condition of the beehive. Possible values:
+  - `"Ninguno"` - No health issues
+  - `"Presencia barroa"` - Varroa mite presence
+  - `"Presencia de plagas"` - Pest presence
+  - `"Enfermedad"` - Disease detected
+</ParamField>
+
+<ParamField path="hasProductionChamber" type="String?">
+  Indicates if the hive has a production chamber. Possible values:
+  - `"Si"` - Yes
+  - `"No"` - No
+</ParamField>
+
+<ParamField path="observations" type="String?">
+  Free-text field for additional notes and observations about the beehive
+</ParamField>
+
+<ParamField path="createdAt" type="DateTime?">
+  Timestamp when the beehive record was created
+</ParamField>
+
+<ParamField path="updatedAt" type="DateTime?">
+  Timestamp when the beehive record was last updated
+</ParamField>
+
+## Methods
+
+### fromJson
+
+Factory constructor to create a `Beehive` instance from JSON data.
+
+```dart
+factory Beehive.fromJson(Map<String, dynamic> json)
+```
+
+**Example:**
+
+```dart
+final json = {
+  'id': 'beehive_123',
+  'apiary_id': 'apiary_456',
+  'hive_number': 5,
+  'activity_level': 'Alta',
+  'bee_population': 'Media',
+  'food_frames': 3,
+  'brood_frames': 7,
+  'hive_status': 'Cámara de cría y producción',
+  'health_status': 'Ninguno',
+  'has_production_chamber': 'Si',
+  'observations': 'Colony showing good growth',
+  'created_at': '2024-01-15T10:30:00Z',
+  'updated_at': '2024-01-20T14:45:00Z',
+};
+
+final beehive = Beehive.fromJson(json);
+```
+
+### toJson
+
+Converts the `Beehive` instance to a JSON map.
+
+```dart
+Map<String, dynamic> toJson()
+```
+
+**Example:**
+
+```dart
+final beehive = Beehive(
+  id: 'beehive_123',
+  apiaryId: 'apiary_456',
+  beehiveNumber: 5,
+  activityLevel: 'Alta',
+);
+
+final json = beehive.toJson();
+// Returns:
+// {
+//   'id': 'beehive_123',
+//   'apiary_id': 'apiary_456',
+//   'hive_number': 5,
+//   'activity_level': 'Alta',
+//   ...
+// }
+```
+
+### copyWith
+
+Creates a new `Beehive` instance with updated values while preserving unchanged properties.
+
+```dart
+Beehive copyWith({
+  String? id,
+  String? apiaryId,
+  int? beehiveNumber,
+  String? activityLevel,
+  String? beePopulation,
+  int? foodFrames,
+  int? broodFrames,
+  String? hiveStatus,
+  String? healthStatus,
+  String? hasProductionChamber,
+  String? observations,
+  DateTime? createdAt,
+  DateTime? updatedAt,
+})
+```
+
+**Example:**
+
+```dart
+final originalBeehive = Beehive(
+  id: 'beehive_123',
+  apiaryId: 'apiary_456',
+  beehiveNumber: 5,
+  activityLevel: 'Media',
+);
+
+// Update only the activity level
+final updatedBeehive = originalBeehive.copyWith(
+  activityLevel: 'Alta',
+);
+
+// updatedBeehive now has activityLevel: 'Alta'
+// but all other properties remain the same
+```
+
+## Enumerations
+
+The beehive domain includes several enumerations for type-safe field values:
+
+<Expandable title="ActivityLevel Enum">
+
+```dart
+enum ActivityLevel {
+  alta('Alta'),
+  media('Media'),
+  baja('Baja');
+
+  final String value;
+  const ActivityLevel(this.value);
+}
+```
+
+Represents the activity level of bees in the hive.
+
+</Expandable>
+
+<Expandable title="BeePopulation Enum">
+
+```dart
+enum BeePopulation {
+  alta('Alta'),
+  media('Media'),
+  baja('Baja');
+
+  final String value;
+  const BeePopulation(this.value);
+}
+```
+
+Represents the population density classification.
+
+</Expandable>
+
+<Expandable title="HiveStatus Enum">
+
+```dart
+enum HiveStatus {
+  camaraDeCriaYProduccion('Cámara de cría y producción'),
+  camaraDeCriaYDobleAlzaDeProduccion('Cámara de cría y doble alza de producción'),
+  camaraDeCria('Cámara de cría'),
+  camaraDeProduccion('Cámara de producción');
+
+  final String value;
+  const HiveStatus(this.value);
+}
+```
+
+Represents the operational configuration of the hive.
+
+</Expandable>
+
+<Expandable title="HealthStatus Enum">
+
+```dart
+enum HealthStatus {
+  ninguno('Ninguno'),
+  presenciaBarroa('Presencia barroa'),
+  presenciaDePlagas('Presencia de plagas'),
+  enfermedad('Enfermedad');
+
+  final String value;
+  const HealthStatus(this.value);
+}
+```
+
+Represents health conditions and issues affecting the hive.
+
+</Expandable>
+
+<Expandable title="HasProductionChamber Enum">
+
+```dart
+enum HasProductionChamber {
+  si('Si'),
+  no('No');
+
+  final String value;
+  const HasProductionChamber(this.value);
+}
+```
+
+Indicates presence of a production chamber.
+
+</Expandable>
+
+## Usage Example
+
+```dart
+import 'package:Softbee/feature/beehive/domain/entities/beehive.dart';
+
+// Create a new beehive instance
+final beehive = Beehive(
+  id: 'beehive_789',
+  apiaryId: 'apiary_123',
+  beehiveNumber: 12,
+  activityLevel: 'Alta',
+  beePopulation: 'Media',
+  foodFrames: 4,
+  broodFrames: 6,
+  hiveStatus: 'Cámara de cría y producción',
+  healthStatus: 'Ninguno',
+  hasProductionChamber: 'Si',
+  observations: 'Strong colony with healthy queen',
+  createdAt: DateTime.now(),
+);
+
+// Convert to JSON for API transmission
+final json = beehive.toJson();
+
+// Create from API response
+final receivedBeehive = Beehive.fromJson(apiResponse);
+
+// Update specific fields
+final updatedBeehive = beehive.copyWith(
+  activityLevel: 'Media',
+  foodFrames: 5,
+  observations: 'Added additional food frames',
+  updatedAt: DateTime.now(),
+);
+
+// Value comparison (thanks to Equatable)
+final areEqual = beehive == updatedBeehive; // false
+```
+
+## Location
+
+Source file: `/lib/feature/beehive/domain/entities/beehive.dart`

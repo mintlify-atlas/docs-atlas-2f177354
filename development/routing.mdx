@@ -1,0 +1,441 @@
+---
+title: 'Routing & Navigation'
+description: 'Navigation setup with GoRouter and route management'
+icon: 'route'
+---
+
+## Overview
+
+Softbee uses **GoRouter** for declarative routing with deep linking support, authentication guards, and type-safe navigation. The routing system is tightly integrated with Riverpod for auth-based redirects.
+
+## Router Setup
+
+The main router is configured as a Riverpod provider:
+
+```dart lib/core/router/app_router.dart
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final notifier = ref.watch(routerNotifierProvider);
+
+  return GoRouter(
+    refreshListenable: notifier,
+    initialLocation: kIsWeb ? AppRoutes.landingRoute : AppRoutes.loginRoute,
+    routes: [
+      // Route definitions
+    ],
+    redirect: (context, state) {
+      // Auth-based redirects
+    },
+    errorBuilder: (context, state) => const NotFoundPage(),
+  );
+});
+```
+
+<Note>
+The router automatically refreshes when authentication state changes via `RouterNotifier`.
+</Note>
+
+## Route Definitions
+
+All route paths are defined as constants:
+
+```dart lib/core/router/app_routes.dart
+abstract class AppRoutes {
+  // Public routes
+  static const String landingRoute = '/';
+  static const String loginRoute = '/login';
+  static const String registerRoute = '/register';
+  static const String resetPasswordRoute = '/reset-password/:token';
+  
+  // Protected routes
+  static const String dashboardRoute = '/dashboard';
+  static const String userProfileRoute = '/profile';
+  
+  // Apiary-specific routes
+  static const String apiaryDashboardRoute = '/apiary-dashboard/:apiaryId';
+  static const String monitoringOverviewRoute = 
+      '/apiary-dashboard/:apiaryId/monitoring';
+  static const String beehiveManagementRoute = 
+      '/apiary-dashboard/:apiaryId/hives';
+  static const String inventoryRoute = '/apiary-dashboard/:apiaryId/inventory';
+  static const String reportsRoute = '/apiary-dashboard/:apiaryId/reports';
+  static const String historyRoute = '/apiary-dashboard/:apiaryId/history';
+  static const String apiarySettingsRoute = 
+      '/apiary-dashboard/:apiaryId/settings';
+}
+```
+
+<Warning>
+Always use route constants from `AppRoutes` - never hardcode paths in navigation code.
+</Warning>
+
+## Router Notifier
+
+The `RouterNotifier` listens to auth state changes and triggers router refresh:
+
+```dart lib/core/router/app_router.dart
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+  
+  RouterNotifier(this._ref) {
+    _ref.listen<AuthState>(
+      authControllerProvider,
+      (_, __) => notifyListeners(),
+    );
+  }
+}
+
+final routerNotifierProvider = Provider<RouterNotifier>((ref) {
+  return RouterNotifier(ref);
+});
+```
+
+## Route Configuration
+
+### Simple Routes
+
+```dart
+GoRoute(
+  path: AppRoutes.landingRoute,
+  builder: (context, state) => const LandingPage(),
+),
+
+GoRoute(
+  path: AppRoutes.dashboardRoute,
+  builder: (context, state) => const MenuScreen(),
+),
+```
+
+### Routes with Path Parameters
+
+```dart
+GoRoute(
+  name: AppRoutes.apiaryDashboardRoute,
+  path: AppRoutes.apiaryDashboardRoute,
+  builder: (context, state) {
+    final apiaryId = state.pathParameters['apiaryId'] as String;
+    final apiaryName = state.uri.queryParameters['apiaryName'];
+    final apiaryLocation = state.uri.queryParameters['apiaryLocation'];
+
+    return ApiaryDashboardMenu(
+      apiaryId: apiaryId,
+      apiaryName: apiaryName ?? 'Apiario Desconocido',
+      apiaryLocation: apiaryLocation,
+    );
+  },
+)
+```
+
+<Accordion title="Path Parameters vs Query Parameters">
+- **Path parameters** (`:apiaryId`): Required parts of the URL path
+- **Query parameters** (`?apiaryName=value`): Optional data passed in URL
+</Accordion>
+
+### Nested Routes
+
+```dart
+GoRoute(
+  path: AppRoutes.apiaryDashboardRoute,
+  builder: (context, state) => ApiaryDashboardMenu(...),
+  routes: [
+    GoRoute(
+      path: 'monitoring',
+      name: AppRoutes.monitoringOverviewRoute,
+      builder: (context, state) {
+        final apiaryId = state.pathParameters['apiaryId'] as String;
+        return MonitoringOverviewPage(apiaryId: apiaryId);
+      },
+      routes: [
+        GoRoute(
+          path: 'questions',
+          name: AppRoutes.questionsManagementRoute,
+          builder: (context, state) {
+            final apiaryId = state.pathParameters['apiaryId']!;
+            return QuestionsManagementScreen(apiaryId: apiaryId);
+          },
+        ),
+      ],
+    ),
+    GoRoute(
+      path: 'inventory',
+      name: AppRoutes.inventoryRoute,
+      builder: (context, state) {
+        final apiaryId = state.pathParameters['apiaryId'] as String;
+        return InventoryManagementPage(apiaryId: apiaryId);
+      },
+    ),
+    GoRoute(
+      path: 'settings',
+      name: AppRoutes.apiarySettingsRoute,
+      builder: (context, state) {
+        final apiaryId = state.pathParameters['apiaryId'] as String;
+        return ApiarySettingsPage(apiaryId: apiaryId);
+      },
+    ),
+  ],
+)
+```
+
+## Authentication Guards
+
+The router implements global authentication logic via the `redirect` callback:
+
+```dart lib/core/router/app_router.dart
+redirect: (context, state) {
+  final authState = ref.read(authControllerProvider);
+  final isLoggedIn = authState.isAuthenticated;
+  
+  final isAuthRoute = state.matchedLocation == AppRoutes.loginRoute ||
+      state.matchedLocation == AppRoutes.registerRoute ||
+      state.matchedLocation == '/forgot-password' ||
+      state.matchedLocation.startsWith(
+        AppRoutes.resetPasswordRoute.split(':')[0],
+      );
+      
+  final isLandingRoute = state.matchedLocation == AppRoutes.landingRoute;
+
+  // Wait for auth check to complete
+  if (authState.isAuthenticating) {
+    return null; // Don't redirect while checking auth
+  }
+
+  // Redirect to login if not authenticated and accessing protected route
+  if (!isLoggedIn && !isAuthRoute && !isLandingRoute) {
+    return AppRoutes.loginRoute;
+  }
+
+  // Redirect to dashboard if authenticated and on auth/landing page
+  if (isLoggedIn && (isAuthRoute || isLandingRoute)) {
+    return AppRoutes.dashboardRoute;
+  }
+
+  return null; // No redirect needed
+},
+```
+
+<Note>
+The redirect logic prevents unauthenticated access to protected routes and avoids redirect loops during auth state initialization.
+</Note>
+
+## Navigation Patterns
+
+### Basic Navigation
+
+<CodeGroup>
+
+```dart Declarative (Recommended)
+// Navigate to a route
+context.go(AppRoutes.dashboardRoute);
+
+// Navigate and replace current route
+context.go(AppRoutes.loginRoute);
+```
+
+```dart Imperative
+// Push a new route
+context.push(AppRoutes.userProfileRoute);
+
+// Pop current route
+context.pop();
+
+// Replace current route
+context.replace(AppRoutes.dashboardRoute);
+```
+
+</CodeGroup>
+
+### Navigation with Parameters
+
+```dart
+// Path parameters
+context.go('/apiary-dashboard/123');
+
+// Named routes with parameters
+context.goNamed(
+  AppRoutes.apiaryDashboardRoute,
+  pathParameters: {'apiaryId': '123'},
+  queryParameters: {
+    'apiaryName': 'My Apiary',
+    'apiaryLocation': 'Farm Location',
+  },
+);
+```
+
+### Programmatic Navigation in Controllers
+
+```dart
+class ApiariesController extends StateNotifier<ApiariesState> {
+  // ...
+  
+  Future<void> selectApiary(String apiaryId, BuildContext context) async {
+    context.goNamed(
+      AppRoutes.apiaryDashboardRoute,
+      pathParameters: {'apiaryId': apiaryId},
+    );
+  }
+}
+```
+
+<Warning>
+Avoid passing `BuildContext` to controllers. Instead, handle navigation in the widget layer after state changes.
+</Warning>
+
+## Deep Linking
+
+GoRouter automatically handles deep links and web URLs:
+
+```dart
+// These URLs all work automatically:
+// https://softbee.app/
+// https://softbee.app/login
+// https://softbee.app/apiary-dashboard/123
+// https://softbee.app/apiary-dashboard/123/monitoring
+```
+
+## Platform-Specific Initial Routes
+
+```dart
+initialLocation: kIsWeb 
+    ? AppRoutes.landingRoute 
+    : AppRoutes.loginRoute,
+```
+
+- **Web**: Start at landing page
+- **Mobile**: Start at login page
+
+## Error Handling
+
+Custom 404 page for invalid routes:
+
+```dart
+errorBuilder: (context, state) => const NotFoundPage(),
+```
+
+## Navigation Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Named Routes">
+    Prefer named routes with `goNamed()` for type safety and easier refactoring:
+    ```dart
+    // Good
+    context.goNamed(
+      AppRoutes.apiaryDashboardRoute,
+      pathParameters: {'apiaryId': id},
+    );
+    
+    // Avoid
+    context.go('/apiary-dashboard/$id');
+    ```
+  </Accordion>
+
+  <Accordion title="Route Constants">
+    Always define routes in `AppRoutes` class - never use string literals in navigation code.
+  </Accordion>
+
+  <Accordion title="Handle Navigation in Widgets">
+    Controllers should update state; widgets should handle navigation based on state changes:
+    ```dart
+    // In widget
+    ref.listen(apiariesControllerProvider, (previous, next) {
+      if (next.navigationTarget != null) {
+        context.go(next.navigationTarget!);
+      }
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Auth State Synchronization">
+    The router automatically syncs with auth state via `RouterNotifier`. No manual intervention needed.
+  </Accordion>
+</AccordionGroup>
+
+## Testing Navigation
+
+```dart
+testWidgets('Redirects to login when not authenticated', (tester) async {
+  final container = ProviderContainer(
+    overrides: [
+      authControllerProvider.overrideWith(
+        (ref) => MockAuthController()..setUnauthenticated(),
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        routerConfig: container.read(appRouterProvider),
+      ),
+    ),
+  );
+
+  await tester.pumpAndSettle();
+
+  // Verify redirected to login
+  expect(find.byType(LoginPage), findsOneWidget);
+});
+```
+
+## Route Structure Visualization
+
+```mermaid
+graph TD
+    A[/ Landing] --> B[/login]
+    A --> C[/register]
+    A --> D[/dashboard]
+    D --> E[/apiary-dashboard/:id]
+    E --> F[monitoring]
+    E --> G[inventory]
+    E --> H[reports]
+    E --> I[settings]
+    F --> J[questions]
+    F --> K[beehives]
+```
+
+## Common Navigation Examples
+
+<CodeGroup>
+
+```dart Login to Dashboard
+// After successful login
+context.go(AppRoutes.dashboardRoute);
+```
+
+```dart Select Apiary
+// Navigate to apiary dashboard
+context.goNamed(
+  AppRoutes.apiaryDashboardRoute,
+  pathParameters: {'apiaryId': apiary.id},
+  queryParameters: {
+    'apiaryName': apiary.name,
+    'apiaryLocation': apiary.location,
+  },
+);
+```
+
+```dart Navigate to Nested Route
+// Navigate to monitoring questions
+context.goNamed(
+  AppRoutes.questionsManagementRoute,
+  pathParameters: {'apiaryId': selectedApiaryId},
+);
+```
+
+```dart Logout
+// Clear auth and return to login
+await ref.read(authControllerProvider.notifier).logout();
+// Router automatically redirects to login
+```
+
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="State Management" icon="arrows-rotate" href="/development/state-management">
+    Learn how state drives navigation
+  </Card>
+  <Card title="Networking" icon="network-wired" href="/development/networking">
+    Understand API integration
+  </Card>
+</CardGroup>
