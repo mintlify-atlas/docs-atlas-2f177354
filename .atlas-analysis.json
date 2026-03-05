@@ -1,0 +1,136 @@
+{
+  "projectType": "saas",
+  "projectName": "Softbee",
+  "projectDescription": "A comprehensive beekeeping management system for monitoring apiaries, hives, health, production, and inventory with real-time data tracking.",
+  "theme": "almond",
+  "primaryColor": "#FFD100",
+  "lightColor": "#FFF8E1",
+  "darkColor": "#F9A825",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/clean-architecture",
+              "concepts/features-overview"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/authentication",
+              "features/apiaries",
+              "features/beehives",
+              "features/monitoring",
+              "features/inventory"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/getting-started",
+              "guides/managing-apiaries",
+              "guides/managing-beehives",
+              "guides/inspections",
+              "guides/inventory-tracking"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/project-structure",
+              "development/state-management",
+              "development/routing",
+              "development/networking",
+              "development/testing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/core/router",
+              "api/core/theme",
+              "api/core/network",
+              "api/core/error-handling"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/entities",
+              "api/auth/usecases",
+              "api/auth/repositories"
+            ]
+          },
+          {
+            "group": "Apiaries",
+            "pages": [
+              "api/apiaries/entities",
+              "api/apiaries/usecases",
+              "api/apiaries/repositories"
+            ]
+          },
+          {
+            "group": "Beehives",
+            "pages": [
+              "api/beehives/entities",
+              "api/beehives/usecases",
+              "api/beehives/repositories"
+            ]
+          },
+          {
+            "group": "Monitoring",
+            "pages": [
+              "api/monitoring/entities",
+              "api/monitoring/usecases",
+              "api/monitoring/repositories"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "User authentication with biometric support",
+    "Apiary management and location tracking",
+    "Beehive monitoring with health status tracking",
+    "Production and inventory management",
+    "Inspection and treatment tracking",
+    "Real-time data synchronization",
+    "Clean Architecture with feature-based modules",
+    "State management with Riverpod",
+    "Declarative routing with GoRouter",
+    "Custom animations and UI components"
+  ],
+  "publicApiSurface": [
+    "LoginUseCase",
+    "RegisterUseCase",
+    "LogoutUseCase",
+    "CheckAuthStatusUseCase",
+    "GetUserFromTokenUseCase",
+    "GetApiariesUseCase",
+    "CreateApiaryUseCase",
+    "UpdateApiaryUseCase",
+    "DeleteApiaryUseCase",
+    "GetBeehivesUseCase",
+    "CreateBeehiveUseCase",
+    "UpdateBeehiveUseCase"
+  ]
+}
